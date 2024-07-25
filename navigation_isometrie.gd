@@ -2,8 +2,8 @@ extends Node2D
 
 var point
 
-var dim_x = 50
-var dim_y = 50
+var dim_x = 120
+var dim_y = 120
 
 var base_mesh = []
 var occupancy_mesh = []
@@ -184,13 +184,75 @@ func intersect_with_occupied_polygons(p,q):
 
 var shortest_path
 var graph
+
+
+var position_to_units = {}
+var position_to_visible_edges = {}
+
+func add_visible_edges(point):
+	var visible_edges = []
+	position_to_visible_edges[point] = []
+	
+	for i in len(edges):
+		if not intersect_with_occupied_polygons(point, edges[i]):
+			position_to_visible_edges[point].append(i)
+
+func generate_position_to_visible_edges():
+	for i in range(dim_x):
+		for j in range(dim_y):
+			var pos = Vector2(i*8, j*8)
+			add_visible_edges(pos)	
+	
+
+func shortest_path_between_positions(
+	p1: Vector2,
+	p2: Vector2
+):
+	if not intersect_with_occupied_polygons(p1, p2):
+		return [p1,p2]
+	
+	var neigh_1 = position_to_visible_edges[p1]
+	var neigh_2 = position_to_visible_edges[p2]
+	var min_dist = INF
+	var edge_1
+	var edge_2
+	for i in neigh_1:
+		var dist_1 = GeometryUtils.isometric_distance(p1, edges[i])
+		for j in neigh_2:
+			var dist_2 = GeometryUtils.isometric_distance(p2, edges[j])
+			var dist = dist_1 + edges_to_dist[i][j] + dist_2
+			if dist < min_dist:
+				edge_1 = i
+				edge_2 = j
+				min_dist = dist
+	
+	var path = edges_to_path[edge_1][edge_2]
+	var s_path = [p1]
+	s_path.append_array(path)
+	s_path.append(p2)
+	return s_path
+	
+	
+	
+
+var edges_to_dist = {}
+var edges_to_path = {}
+
+func generate_dists(graph):
+	var size = len(edges)
+	for i in range(size):
+		edges_to_dist[i] = {}
+		edges_to_path[i] = {}
+		for j in range(size):
+			var node = Dijstra.find_shortest_path(graph, graph[i], graph[j])
+			edges_to_dist[i][j] = node["distance"]
+			edges_to_path[i][j] = node["path"]
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	for polygon in $Poly.get_children():
 		occupied_polygons.append(polygon.polygon)
 	edges = generate_edges()
-	print(len(edges))
-	#mark_corners()
 	
 	var connections = []
 	
@@ -201,12 +263,17 @@ func _ready():
 				line.append(false)
 			else:
 				line.append(true)
-			
 		connections.append(line)
-	#print(connections)
+		
 	graph = Dijstra.generate_graph(edges, connections)
-	shortest_path = Dijstra.find_shortest_path(graph, graph[0], graph[14])
-	#print(GeometryUtils.isometric_distance(Vector2(0,0), Vector2(2,1)))
+	generate_dists(graph)
+	generate_position_to_visible_edges()
+	shortest_path = shortest_path_between_positions(
+		Vector2(64, 64),
+		Vector2(800, 400)
+	)
+	#shortest_path = Dijstra.find_shortest_path(graph, graph[0], graph[7])
+	
 	
 	
 func _draw():
@@ -216,7 +283,21 @@ func _draw():
 		var start = shortest_path[i]
 		var end = shortest_path[i+1]
 		draw_line(start, end, Color.RED)
+	
+	var v_e_1 = position_to_visible_edges[Vector2(64, 64)]
+	var v_e_2 = position_to_visible_edges[Vector2(800, 400)]
+	
+	for e in v_e_1:
+		draw_circle(edges[e], 4, Color.WHITE)
+		
+	for e in v_e_2:
+		draw_circle(edges[e], 4, Color.RED)
+	
 	"""
+	
+	Vector2(64, 64),
+	Vector2(256, 320)
+	
 	for i in dim_x:
 		for j in dim_y:
 			var point = base_mesh[i][j]

@@ -71,7 +71,6 @@ static func find_shortest_path(graph, start, goal):
 	var shortest_path = [goal["point"]]
 	var previous_node = goal		
 	
-	
 	while true:
 		var id = previous_node["visited_from"]
 		if not id:
@@ -82,4 +81,7 @@ static func find_shortest_path(graph, start, goal):
 	shortest_path.append(start["point"])
 	shortest_path.reverse()
 		
-	return shortest_path
+	return {
+		"path": shortest_path,
+		"distance": goal["dist"]
+	}
