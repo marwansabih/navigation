@@ -13,7 +13,6 @@ static func orientation(p, q, r):
 	  
 	var val = (float(q.y - p.y) * (r.x - q.x)) - (float(q.x - p.x) * (r.y - q.y)) 
 	if (val > 0): 
-		  
 		# Clockwise orientation 
 		return 1
 	elif (val < 0): 
@@ -84,3 +83,9 @@ static func interset_with_shape(shape: Array, p: Vector2,q: Vector2):
 static func isometric_distance(p,q):
 	var d = q - p
 	return sqrt(d.x**2/2 + 2 * d.y**2)
+
+
+static func get_closest_mesh_position(position):
+	var x = int(position.x) - (int(position.x) % 8)
+	var y = int(position.y) - (int(position.y) % 8)
+	return Vector2(x,y)
