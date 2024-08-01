@@ -37,9 +37,10 @@ func get_local_dir(pos: Vector2, goal: Vector2):
 			actor_positions.append_array(actors)
 
 	var dir = Vector2(0,0)
+	var dist = pos.distance_to(goal)
 	for point in actor_positions:
-		dir += generate_source_velocity(pos, point, 5)
-	dir += generate_source_velocity(pos, goal, -80)
+		dir += generate_source_velocity(pos, point, 15)
+	dir += generate_source_velocity(pos, goal, -20 - dist)
 	return dir.normalized()
 
 func plane_in_dir(dir):
