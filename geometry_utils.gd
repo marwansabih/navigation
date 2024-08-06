@@ -1,6 +1,51 @@
 class_name GeometryUtils
 extends Node
 
+static func get_wall_points(line, distance):
+	var p1: Vector2 = line[0]
+	var p2: Vector2 = line[1]
+	var start = p1
+	var end = p2
+	if p1.y > p2.y:
+		start = p2
+		end = p1
+	if p1.x < p2.x:
+		start = p1
+		end = p2
+	
+	var dir_1 = p1.direction_to(p2)
+	var dir_2 = dir_1.rotated(PI/2)
+	var A = start - dir_2 * distance
+	var B = end - dir_2 * distance
+	var C = end + dir_2 * distance
+	var D = start + dir_2 * distance
+	var polygon = [A,B,C,D]
+	
+	# Mark sourrounding rectangle
+	var up = INF
+	var down = -INF
+	var left = INF
+	var right = -INF
+
+	for point in polygon:
+		up = int(min(up, point.y))
+		down =int(max(down, point.y))
+		left = int(min(left, point.x))
+		right = int(max(right, point.x))
+		
+	up = up - up % 8
+	left = left - left % 8
+	
+	var positions = []
+	
+	for p_x in range(left, right + 1, 8):
+		for p_y in range(up, down + 1, 8):
+			var pos = Vector2(p_x, p_y)
+			if Geometry2D.is_point_in_polygon(pos, polygon):
+				positions.append(pos)
+	return positions
+		
+
 static func orientation(p, q, r): 
 	# to find the orientation of an ordered triplet (p,q,r) 
 	# function returns the following values: 
@@ -86,6 +131,12 @@ static func isometric_distance(p,q):
 
 
 static func get_closest_mesh_position(position):
-	var x = int(position.x) - (int(position.x) % 8)
-	var y = int(position.y) - (int(position.y) % 8)
+	var dx = int(position.x) % 8
+	var dy = int(position.y) % 8
+	if dx > 4:
+		dx + 8
+	if dy > 4:
+		dy + 8
+	var x = int(position.x) - dx
+	var y = int(position.y) - dy
 	return Vector2(x,y)
