@@ -1,6 +1,40 @@
 class_name GeometryUtils
 extends Node
 
+static func in_polygons_range(polygons, radius, pos):
+	for p in polygons.get_children():
+		var poly = p.polygon
+		if in_polygon_range(poly, radius, pos):
+			return true
+	return false
+
+static func in_polygon_range(polygon, radius, pos):
+	var size = len(polygon)
+	for i in range(size):
+		var next_idx = (i+1) % size
+		var p1: Vector2 = polygon[i]
+		var p2: Vector2 = polygon[next_idx]
+		var distance = p1.distance_to(pos)
+		if distance <= radius+1:
+			return true
+		distance = p2.distance_to(pos)
+		if distance <= radius +1:
+			return true
+		var dir: Vector2 = p1.direction_to(p2)
+		var parallel = dir.dot(pos - p1)
+		var between_points = 0 < parallel and parallel < (p2-p1).length()
+		distance = abs(dir.rotated(PI/2).dot(pos-p1))
+		var in_range = distance <  radius +1
+		if between_points and in_range:
+			return true
+	return false	
+
+static func enlarge_polyogon(polygon):
+	var size = len(polygon)
+	for i in range(size):
+		var next_idx =  i
+	
+
 static func get_wall_points(line, distance):
 	var p1: Vector2 = line[0]
 	var p2: Vector2 = line[1]

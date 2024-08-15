@@ -66,7 +66,7 @@ func generate_source_velocity(pos, loc, strength, dist_power):
 	#print(Vector2(v_x, v_y).length())
 	return strength / dist**dist_power * Vector2(v_x,v_y) * ( 1 +  randf())
 
-func get_local_dir(pos: Vector2, goal: Vector2):
+func get_local_dir(pos: Vector2, goal: Vector2, delta):
 	var pos_m = GeometryUtils.get_closest_mesh_position(pos)
 	var map_polys = []
 	var actor_positions = []
@@ -83,7 +83,7 @@ func get_local_dir(pos: Vector2, goal: Vector2):
 	#for actor in fake_characters:
 	#	actor_positions.append(actor)
 	
-	if pos.distance_to(fake_character["position"]) > 0.01:		
+	if pos.distance_to(fake_character["position"]) > 0.01:
 		actor_positions.append(fake_character["position"])
 			
 	for actor in fake_chars:
@@ -93,12 +93,25 @@ func get_local_dir(pos: Vector2, goal: Vector2):
 			actor_positions.append(f_pos)
 		#break
 	
+	var in_poly_range = false
+	
+	for polygon in $Poly.get_children():
+		in_poly_range = GeometryUtils.in_polygon_range(
+			polygon.polygon,
+			16,
+			pos
+		)
+		
 	return VFUtils.get_dir(
 		pos,
-		actor_positions, 
+		actor_positions,
 		goal,
-		8
+		8,
+		$Poly,
+		delta,
+		in_poly_range
 	)
+	"""
 
 	var dir_source = Vector2(0,0)
 	var dist = pos.distance_to(goal)
@@ -120,6 +133,7 @@ func get_local_dir(pos: Vector2, goal: Vector2):
 	if dir_wall.length() > 0.1:
 		return 2*dir_wall.normalized()
 	return (dir_goal + dir_source).normalized()
+	"""
 
 func plane_in_dir(dir):
 	pass
@@ -134,17 +148,64 @@ func get_edge_point(
 	polygon,
 	p_point,
 	point,
-	n_point
+	n_point,
+	corner_distance
 ):
-	var dir_1 = (p_point - point).normalized()
-	var dir_2 = (n_point - point).normalized()
-	var n_dir = (dir_1 + dir_2).normalized() * 20
+	var dir_1: Vector2 = (p_point - point).normalized()
+	var dir_2: Vector2 = (n_point - point).normalized()
+	var signum = 1 
+	#if dir_1.angle_to(-dir_2)/ PI < -0.5 and dir_1.angle_to(-dir_2)/PI > 0.5:
+	#	signum = - 1
+	
+	var polys = []
+	for p in $Poly.get_children():
+		polys.append(p.polygon)
+	
+	var to_b = -(dir_1 - dir_1.dot(dir_2)*dir_2).normalized() * corner_distance
+	var to_e =  -(dir_2 - dir_2.dot(dir_1)*dir_1).normalized() * corner_distance
+	
+	var b: Vector2 = point + to_b
+	var e: Vector2 = point + to_e
+	
+	if inside_polygons(e, polys):
+		e = point - to_e #-e point - to_e
+	if inside_polygons(b, polys):
+		b = point - to_b # -b#point - to_b
+	
+	var t_1 = - b.x/dir_2.x * dir_2.y + b.y
+	var m_1 = dir_2.y/dir_2.x
+	var t_2 = - e.x/dir_1.x * dir_1.y + e.y
+	var m_2 = dir_1.y/dir_1.x
+	var x = (t_2-t_1)/(m_1-m_2)
+	var y = m_1*x + t_1
+	
+	#var result = 
+	return Vector2(x,y)
+	
+	if inside_polygons(e, polys):
+		e = point + to_e 
+	if inside_polygons(b, polys):
+		b = point + to_b
+	var f = ((b.y - e.y)*dir_1.x+ dir_1.y*(e.x-b.x))/(dir_2.y*dir_1.x-dir_2.x*dir_1.y)
+	#print(f)
+	#print(e + f * dir_2))
+	#return b
+	#return e
+	return e + f * dir_2
+	return point -(dir_1 - dir_1.dot(dir_2) * dir_2).normalized() * corner_distance #e #+ f * dir_2
+	
+	
+	var p_1 = (dir_1 + dir_2).normalized().dot(dir_1)
+	var p_2 = (dir_1 + dir_2).normalized().dot(dir_2)
+	var min_p = min(p_1, p_2)
+	var n_dir = (dir_1 + dir_2) * corner_distance / min_p
+	
 	var new_point = point - n_dir
 	if not outside_region(new_point):
 		return new_point
 	return point + n_dir
 
-func generate_polygon_edges(polygon):
+func generate_polygon_edges(polygon, corner_distance):
 	var p = polygon.polygon
 	var size = len(p)
 	var p_index = size - 1
@@ -157,16 +218,26 @@ func generate_polygon_edges(polygon):
 			p,
 			p_point,
 			point,
-			n_point
+			n_point,
+			corner_distance
 		)
 		edge_points.append(edge)
 		p_index = i
 	return edge_points
 
+var large_polygons = []
+
+func setup_large_polygons():
+	for p in $Poly.get_children():
+		var poly = generate_polygon_edges(p, 7)
+		large_polygons.append(poly)
+		#large_polygons.append(p.polygon)
+	
+
 func generate_edges():
 	var edges = []
 	for polygon in $Poly.get_children():
-		edges.append_array(generate_polygon_edges(polygon))
+		edges.append_array(generate_polygon_edges(polygon, 16))
 	return edges
 		
 	
@@ -210,7 +281,7 @@ func generate_sourounding_square(pos, size, dir):
 	var left_dir = size * dir.rotated(PI/2)
 	var right_dir = size * dir.rotated(-PI/2)
 	var down_dir = -size * dir
-	var up_dir = size * dir 
+	var up_dir = size * dir
 	var left = pos + left_dir
 	var right = pos + right_dir
 	var down = pos + down_dir
@@ -331,7 +402,7 @@ func generate_position_to_visible_edges():
 	for i in range(dim_x):
 		for j in range(dim_y):
 			var pos = Vector2(i*8, j*8)
-			add_visible_edges(pos)	
+			add_visible_edges(pos)
 
 func subdivide_shortest_path(path):
 	var new_path = [path[0]]
@@ -340,7 +411,7 @@ func subdivide_shortest_path(path):
 		var p2: Vector2 = path[i+1]
 		
 		var dist = p1.distance_to(p2)
-		var nr_sub_points = max(int(dist/5),1)
+		var nr_sub_points = max(int(dist/25),1)
 		var dir = p1.direction_to(p2).normalized()
 		for j in range(nr_sub_points):
 			var delta = float(j+1) / float(nr_sub_points) * dist
@@ -390,12 +461,12 @@ var fake_character = {
 	"position" = Vector2(8,8),
 	"dir" = null,
 	"local_path" = null
-} 
+}
 
 var fake_chars = []
 
 func generate_fake_chars():
-	for i in range(10):
+	for i in range(9):
 		var char = {
 			"velocity" =75,
 			"position" = Vector2(16 + 36*i,100),
@@ -458,15 +529,19 @@ func move_along_direction(
 	var dir = character["dir"]
 	var velocity = character["velocity"]
 	var pos = character["position"]
-	if path[0].distance_to(pos) < 10:
+	if path[0].distance_to(pos) < 1:
 		path.pop_front()
-		if path: 
+		if path:
 			character["dir"] = pos.direction_to(path[0])
+	if len(path) > 1 and not intersect_with_occupied_polygons(pos, path[1]):
+		if (path[1]-path[0]).dot(pos-path[0]) > 0:
+			pass
+			#path.pop_front()
 	if path:
 		if not character["dir"]:
 			character["dir"] = pos.direction_to(path[0])
 		if true:#cycle % 15 == 0:
-			var new_dir = get_local_dir(pos, path[0]) 
+			var new_dir = get_local_dir(pos, path[0], delta * velocity)
 			#build_position_graph(pos, path[0])
 			character["dir"] = new_dir
 		character["position"] += velocity * character["dir"] * delta
@@ -506,11 +581,30 @@ func _ready():
 	setup_pos_to_wall()
 	generate_fake_chars()
 	setup_polygon_position_mesh()
-	for polygon in $Poly.get_children():
-		occupied_polygons.append(polygon.polygon)
-	edges = generate_edges()
+	setup_large_polygons()
+	occupied_polygons = large_polygons
+	#for polygon in $Poly.get_children():
+		#occupied_polygons = large_polygons
+	#	occupied_polygons.append(polygon.polygon)
+	var es = generate_edges()
+	
+	edges = []
+	
+	var ps = []
+	for p in $Poly.get_children():
+		var poly = p.polygon
+		ps.append(poly)
+	
+	for e in es:
+		if e.x > 0 and e.y > 0:
+			if not inside_polygons(e, ps):
+				edges.append(e)
+	
+	print(edges)
 	
 	var connections = generate_connections()
+	
+	print(connections)
 		
 	graph = Dijstra.generate_graph(edges, connections)
 	generate_dists(graph)
@@ -527,9 +621,9 @@ func _ready():
 		shortest_paths.append(short_path)
 	
 	
-	generate_fake_characters()
-	setup_actor_position_mesh()
-	put_characters_to_mesh()
+	#generate_fake_characters()
+	#setup_actor_position_mesh()
+	#put_characters_to_mesh()
 	
 func _input(event):
 	if event is InputEventMouseButton:
@@ -547,33 +641,38 @@ func _input(event):
 		
 func _physics_process(delta):
 	queue_redraw()
+
 	move_along_direction(
 		fake_character,
 		shortest_path,
 		delta
 	)
-
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
 		var s_p = shortest_paths[i]
 		move_along_direction(f_c, s_p, delta)
 	
 func _draw():
+
 	for edge in edges:
 		draw_circle(edge, 4, Color.BLUE)
+		
 	if shortest_path:
+		draw_line(fake_character["position"], shortest_path[0], Color.RED)
 		for i in range(len(shortest_path) - 1):
 			var start = shortest_path[i]
 			var end = shortest_path[i+1]
 			draw_line(start, end, Color.RED)
 	
-	#for path in shortest_paths:
-	#	if not path:
-	#		continue 
-	#	for i in range(len(path) - 1):
-	#		var start = path[i]
-	#		var end = path[i+1]
-	#		draw_line(start, end, Color.RED)
+
+	
+	for path in shortest_paths:
+		if not path:
+			continue 
+		for i in range(len(path) - 1):
+			var start = path[i]
+			var end = path[i+1]
+			draw_line(start, end, Color.RED)
 	
 	#var v_e_1 = position_to_visible_edges[Vector2(64, 64)]
 	#var v_e_2 = position_to_visible_edges[Vector2(800, 400)]
@@ -583,8 +682,16 @@ func _draw():
 		
 	#for e in v_e_2:
 	#	draw_circle(edges[e], 4, Color.RED)
+	var color = Color.NAVY_BLUE
+	
+	if GeometryUtils.in_polygons_range(
+		$Poly,
+		8,
+		fake_character["position"]
+	):
+		color = Color.RED
 		
-	draw_circle(fake_character["position"], 8, Color.NAVY_BLUE)
+	draw_circle(fake_character["position"], 8, color)
 	
 	for fake_char in fake_chars:
 		draw_circle(fake_char["position"], 8, Color.NAVY_BLUE)
@@ -594,33 +701,38 @@ func _draw():
 		for i in range(len(path) -1):
 			draw_line(path[i], path[i+1], Color.BLACK, 1)
 	
+	for polygon in occupied_polygons:
+		for point in polygon:
+			draw_circle(point, 2, Color.NAVY_BLUE)
+	
 	"""
 	var obs_ps = [
-		Vector2(50, 50),
-		Vector2(75, 75),
-		Vector2(125, 75),
-		Vector2(80, 40)
+		#Vector2(50, 50),
+		#Vector2(75, 75),
+		#Vector2(125, 75),
+		Vector2(104, 104)
 	]
 	
 	for p in obs_ps:
-		draw_circle(p, 8, Color.NAVY_BLUE)
+		draw_circle(p, 24, Color.NAVY_BLUE)
 		
 	draw_circle(Vector2(256, 256,), 8, Color.RED)
 		
-	for i in range(100):
-		for j in range(100):
-			var x = i * 32
-			var y = j * 32
+	for i in range(200):
+		for j in range(200):
+			var x = i * 16
+			var y = j * 16
 			var dir = VFUtils.get_dir(
-					Vector2(x,y),
-					obs_ps, 
-					Vector2(256,256),
-					8
+				Vector2(x,y),
+				obs_ps,
+				Vector2(256,256),
+				24
 			)
-			draw_line(Vector2(x,y), Vector2(x,y) + 16 * dir, Color.WHITE, 3)
-			draw_circle(Vector2(x,y) + 16 * dir, 2, Color.BLUE)
+			draw_line(Vector2(x,y), Vector2(x,y) + 8 * dir, Color.WHITE, 3)
+			draw_circle(Vector2(x,y) + 8 * dir, 2, Color.RED)
 	
-	"""	
+	"""
+
 		
 	#for pos in pos_to_walls:
 	#	if pos_to_walls[pos]:
@@ -648,12 +760,14 @@ func _draw():
 		#draw_polyline(square2, Color.BLUE, 1)
 		#draw_line(square2[0], square2[3], Color.BLUE, 1)
 	
+	"""
 	var pos = fake_character["position"]
 	var f_c_pos = GeometryUtils.get_closest_mesh_position(pos)
 	if f_c_pos in pos_to_walls:
 		for wall in pos_to_walls[f_c_pos]:
 			var dir = generate_wall_velocity(pos, wall, 15)
-			draw_line(pos, pos + 30 * dir, Color.RED, 3)	
+			draw_line(pos, pos + 30 * dir, Color.RED, 3)
+	"""
 	
 	"""
 	for p_c in actor_positions:
