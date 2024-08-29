@@ -16,6 +16,13 @@ var pos_to_walls = {}
 
 var walls = []
 
+var small_polygons = []
+
+func setup_small_polygons():
+	for p in $Poly.get_children():
+		#var poly = generate_polygon_edges(p, 12)
+		small_polygons.append(p.polygon)
+
 func setup_pos_to_wall():
 	for i in range(dim_x):
 		for j in range(dim_y):
@@ -229,7 +236,7 @@ var large_polygons = []
 
 func setup_large_polygons():
 	for p in $Poly.get_children():
-		var poly = generate_polygon_edges(p, 7)
+		var poly = generate_polygon_edges(p, 12)
 		large_polygons.append(poly)
 		#large_polygons.append(p.polygon)
 	
@@ -396,7 +403,9 @@ func generate_position_to_visible_edges_2():
 				if not inside_polygons(pos, shadow_polygons[k]):
 					visible_edges.append(k)
 			position_to_visible_edges[pos] = visible_edges
-			
+	for key in position_to_visible_edges.keys():
+		if not position_to_visible_edges[key]:
+			position_to_visible_edges[key] = [GeometryUtils.get_closest_edge(edges, key)]
 			
 func generate_position_to_visible_edges():
 	for i in range(dim_x):
@@ -459,6 +468,7 @@ func shortest_path_between_positions(
 var fake_character = {
 	"velocity" =75,
 	"position" = Vector2(8,8),
+	"org_dir" = Vector2(0,0),
 	"dir" = null,
 	"local_path" = null
 }
@@ -471,6 +481,7 @@ func generate_fake_chars():
 			"velocity" =75,
 			"position" = Vector2(16 + 36*i,100),
 			"dir" = null,
+			"org_dir" = Vector2(0,0),
 			"local_path" = null
 		}
 		fake_chars.append(char)
@@ -478,6 +489,7 @@ func generate_fake_chars():
 			"velocity" =50,
 			"position" = Vector2(16 + 36*i,50),
 			"dir" = null,
+			"org_dir" = Vector2(0,0),
 			"local_path" = null
 		}
 		fake_chars.append(char2)
@@ -529,10 +541,16 @@ func move_along_direction(
 	var dir = character["dir"]
 	var velocity = character["velocity"]
 	var pos = character["position"]
-	if path[0].distance_to(pos) < 1:
+	if pos.direction_to(path[0]).dot(character["org_dir"]) < 0:
 		path.pop_front()
 		if path:
 			character["dir"] = pos.direction_to(path[0])
+			character["org_dir"] = pos.direction_to(path[0])
+	if path and path[0].distance_to(pos) < 4:
+		path.pop_front()
+		if path:
+			character["dir"] = pos.direction_to(path[0])
+			character["org_dir"] = pos.direction_to(path[0])
 	if len(path) > 1 and not intersect_with_occupied_polygons(pos, path[1]):
 		if (path[1]-path[0]).dot(pos-path[0]) > 0:
 			pass
@@ -540,6 +558,7 @@ func move_along_direction(
 	if path:
 		if not character["dir"]:
 			character["dir"] = pos.direction_to(path[0])
+			character["org_dir"] = pos.direction_to(path[0])
 		if true:#cycle % 15 == 0:
 			var new_dir = get_local_dir(pos, path[0], delta * velocity)
 			#build_position_graph(pos, path[0])
@@ -578,6 +597,7 @@ var shortest_paths = []
 	
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	setup_small_polygons()
 	setup_pos_to_wall()
 	generate_fake_chars()
 	setup_polygon_position_mesh()
@@ -600,11 +620,9 @@ func _ready():
 			if not inside_polygons(e, ps):
 				edges.append(e)
 	
-	print(edges)
 	
 	var connections = generate_connections()
 	
-	print(connections)
 		
 	graph = Dijstra.generate_graph(edges, connections)
 	generate_dists(graph)
@@ -647,13 +665,78 @@ func _physics_process(delta):
 		shortest_path,
 		delta
 	)
+	
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
 		var s_p = shortest_paths[i]
 		move_along_direction(f_c, s_p, delta)
+		
+	OrcaUtils.test_randomized_bounded_lp()
 	
 func _draw():
+	#var radius = 8
+	#var p1 = Vector2(500, 500)
+	#var v1 = Vector2(1,0).normalized() * 100
+	#var p2 = Vector2(550, 400)
+	#var v2 = Vector2(0.8,1) * 100
+	#var overlap = GeometryUtils.get_time_overlaps(p1, v1, p2, v2, 8)
+	
 
+	
+	#draw_circle(p1, radius, Color.VIOLET)
+	#draw_line(p1, p1 + v1, Color.BLUE, 3)
+	
+	#draw_circle(p2, radius, Color.VIOLET)
+	#draw_line(p2, p2 + v2, Color.BLUE, 3)
+	
+	var l1 = Vector2(500,500)
+	var l2 = Vector2(550,700)
+	var p = Vector2(400, 600)
+	var online = GeometryUtils.get_closest_point_on_line(l1, l2, p)
+	
+	draw_line(l1, l2, Color.BLUE)
+	draw_circle(p, 5, Color.RED)
+	draw_circle(online, 5, Color.RED)
+	
+	var p1 = Vector2(100, 100)
+	var p2 = Vector2(400, 400)
+	
+	var v_opt = Vector2(180,190)
+	
+	var xs = OrcaUtils.closest_point_on_vo_boundary(
+		p1,
+		p2,
+		20,
+		30,
+		2,
+		v_opt
+	)
+	
+	var m1 = xs[0]
+	var m2 = xs[1]
+	var r1 = xs[2]
+	var r2 = xs[3]
+	var s1_up = xs[4]
+	var s2_up = xs[5]
+	var s1_down = xs[6]
+	var s2_down = xs[7]
+	var closest_point = xs[8]
+
+	
+	draw_circle(m1, r1, Color.DARK_BLUE)
+	draw_circle(m2, r2, Color.DARK_BLUE)
+	draw_circle(v_opt, 8, Color.DARK_VIOLET)
+	draw_circle(closest_point, 8, Color.DARK_RED)
+	
+	draw_line(s1_up, s2_up, Color.VIOLET, 3)
+	draw_line(s1_down, s2_down, Color.VIOLET, 3)
+	draw_line(s1_down, s1_up, Color.VIOLET, 3)
+	
+	#[m1, m2, r1, r2, s1_up, s2_up, s1_down, s2_down]
+	#[m1, m2, r1, r2, s1_up, s2_up, s1_down, s2_down]
+	
+	#draw_circle(overlap, radius, Color.RED)
+	
 	for edge in edges:
 		draw_circle(edge, 4, Color.BLUE)
 		
@@ -664,7 +747,6 @@ func _draw():
 			var end = shortest_path[i+1]
 			draw_line(start, end, Color.RED)
 	
-
 	
 	for path in shortest_paths:
 		if not path:

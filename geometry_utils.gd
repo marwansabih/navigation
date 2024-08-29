@@ -1,6 +1,71 @@
 class_name GeometryUtils
 extends Node
 
+static func get_intersection(
+	p1: Vector2,
+	dir1: Vector2,
+	p2: Vector2,
+	dir2: Vector2
+):
+	if dir1 == dir2 or dir1 == - dir2:
+		return null
+	if dir1.x == 0:
+		var s = (p1.x - p2.x) / dir2.x
+		return p2 + s * dir2
+	if dir1.y == 0:
+		var s = (p1.y - p2.y) / dir2.y
+		return p2 + s * dir2
+	if dir2.x == 0:
+		var t = (p2.x - p1.x) / dir1.x
+		return p1 + t * dir1
+	if dir2.y == 0:
+		var t = (p2.y - p1.y) / dir1.y
+		return p1 + t * dir1
+	var numerator = p1.y * dir1.x - p1.x * dir1.y + p2.x * dir1.y - p2.y * dir1.x
+	var denominator = dir1.x * dir2.y - dir2.x * dir1.y
+	var s = numerator / denominator
+	return p2 + s * dir2
+
+static func get_closest_point_on_line(
+	l1,
+	l2,
+	p
+):
+	var dir : Vector2 = (l2 - l1).normalized()
+	var dir_90 = dir.rotated(PI/2)
+	var numerator = l1.y * dir.x - l1.x * dir.y + p.x * dir.y - p.y * dir.x
+	var denominator = dir.x * dir_90.y - dir_90.x * dir.y
+	var s = numerator / denominator
+	return p + s * dir_90
+
+static func get_time_overlaps(
+	p1: Vector2,
+	v1: Vector2,
+	p2: Vector2,
+	v2: Vector2,
+	radius: float
+):
+	var p: Vector2 = p2 - p1
+	var s = (v2.x*p.y - v2.y*p.x)/(v1.y*v2.x  - v1.x * v2.y)
+	var t = (s*v1.x - p.x)/v2.x
+	var alpha = v1.normalized().angle_to(v2) 
+	var h = 2*radius/sin(alpha)
+	var delta_s = h/v1.length()
+	var delta_t = h/v2.length()
+	
+	return p2 + (t + delta_t) * v2
+	return p1 + (s + delta_s) * v1
+
+static func get_closest_edge(edges, pos):
+	var min = INF
+	var found_edge = null
+	for i in range(len(edges)):
+		var dist = edges[i].distance_to(pos)
+		if dist < min:
+			found_edge = i
+			min = dist
+	return found_edge
+
 static func in_polygons_range(polygons, radius, pos):
 	for p in polygons.get_children():
 		var poly = p.polygon
