@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://d07nurtp6vqrr"]
+
+[ext_resource type="Script" path="res://navigation_isometrie.gd" id="1_4j4iq"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_77bae"]
+outlines = Array[PackedVector2Array]([PackedVector2Array(0, -2, 1183, 1, 1175, 643, 7, 646)])
+source_geometry_group_name = &"navigation_polygon_source_group"
+agent_radius = 5.0
+
+[node name="Navigation" type="Node2D"]
+script = ExtResource("1_4j4iq")
+
+[node name="Poly" type="NavigationRegion2D" parent="."]
+navigation_polygon = SubResource("NavigationPolygon_77bae")
+
+[node name="Polygon2D" type="Polygon2D" parent="Poly"]
+position = Vector2(519, 6)
+polygon = PackedVector2Array(574, 233, 590, 4, 318, 4, 397, 245)

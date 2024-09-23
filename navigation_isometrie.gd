@@ -403,9 +403,16 @@ func generate_position_to_visible_edges_2():
 				if not inside_polygons(pos, shadow_polygons[k]):
 					visible_edges.append(k)
 			position_to_visible_edges[pos] = visible_edges
+	return 
 	for key in position_to_visible_edges.keys():
 		if not position_to_visible_edges[key]:
-			position_to_visible_edges[key] = [GeometryUtils.get_closest_edge(edges, key)]
+			var up = Vector2(key.x, key.y + 8)
+			var down = Vector2(key.x, key.y - 8)
+			var left = Vector2(key.x - 8, key.y)
+			var right = Vector2(key.x + 8, key.y)
+			for dir in [up, down, right, left]:
+				if dir in position_to_visible_edges:
+					position_to_visible_edges[key] = position_to_visible_edges[dir] #[GeometryUtils.get_closest_edge(edges, key)]
 			
 func generate_position_to_visible_edges():
 	for i in range(dim_x):
@@ -466,7 +473,7 @@ func shortest_path_between_positions(
 	
 
 var fake_character = {
-	"velocity" =75,
+	"velocity" =50,
 	"position" = Vector2(8,8),
 	"org_dir" = Vector2(0,0),
 	"dir" = null,
@@ -476,15 +483,16 @@ var fake_character = {
 var fake_chars = []
 
 func generate_fake_chars():
-	for i in range(9):
+	for i in range(1):
 		var char = {
-			"velocity" =75,
+			"velocity" =50,
 			"position" = Vector2(16 + 36*i,100),
 			"dir" = null,
 			"org_dir" = Vector2(0,0),
 			"local_path" = null
 		}
 		fake_chars.append(char)
+		continue
 		var char2 = {
 			"velocity" =50,
 			"position" = Vector2(16 + 36*i,50),
@@ -546,7 +554,7 @@ func move_along_direction(
 		if path:
 			character["dir"] = pos.direction_to(path[0])
 			character["org_dir"] = pos.direction_to(path[0])
-	if path and path[0].distance_to(pos) < 4:
+	if path and path[0].distance_to(pos) < 20:
 		path.pop_front()
 		if path:
 			character["dir"] = pos.direction_to(path[0])
@@ -556,6 +564,7 @@ func move_along_direction(
 			pass
 			#path.pop_front()
 	if path:
+		"""
 		if not character["dir"]:
 			character["dir"] = pos.direction_to(path[0])
 			character["org_dir"] = pos.direction_to(path[0])
@@ -563,7 +572,8 @@ func move_along_direction(
 			var new_dir = get_local_dir(pos, path[0], delta * velocity)
 			#build_position_graph(pos, path[0])
 			character["dir"] = new_dir
-		character["position"] += velocity * character["dir"] * delta
+		"""
+		character["position"] += character["new_velocity"] * delta#velocity * character["dir"] * delta
 		cycle += 1
 		#character["position"] += velocity * character["dir"] * delta
 	
@@ -656,22 +666,30 @@ func _input(event):
 				event.position
 			)
 			shortest_paths[i] = short_path
+		match event.button_index:
+			MOUSE_BUTTON_LEFT:
+				pos = event.position
+			MOUSE_BUTTON_RIGHT:
+				v = event.position - pos 
 		
 func _physics_process(delta):
+	OrcaUtils.test_randomized_bounded_lp()
 	queue_redraw()
-
-	move_along_direction(
-		fake_character,
-		shortest_path,
-		delta
-	)
+	OrcaUtils.set_velocities(fake_chars, shortest_paths, walls)
+	
+	#move_along_direction(
+	#	fake_character,
+	#	shortest_path,
+	##	delta
+	#)
 	
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
 		var s_p = shortest_paths[i]
 		move_along_direction(f_c, s_p, delta)
 		
-	OrcaUtils.test_randomized_bounded_lp()
+var v = Vector2(-20, -20)
+var pos = Vector2(200, 300)
 	
 func _draw():
 	#var radius = 8
@@ -698,39 +716,53 @@ func _draw():
 	draw_circle(p, 5, Color.RED)
 	draw_circle(online, 5, Color.RED)
 	
-	var p1 = Vector2(100, 100)
-	var p2 = Vector2(400, 400)
+	var p1 = Vector2(0, 0)
+	var p2 = Vector2(-50, -50)
 	
-	var v_opt = Vector2(180,190)
+	var v_opt = Vector2(-50,100)
 	
 	var xs = OrcaUtils.closest_point_on_vo_boundary(
 		p1,
 		p2,
-		20,
-		30,
-		2,
+		8,
+		8,
+		10,
 		v_opt
 	)
+	var shift = Vector2(250, 250)
 	
-	var m1 = xs[0]
-	var m2 = xs[1]
-	var r1 = xs[2]
-	var r2 = xs[3]
-	var s1_up = xs[4]
-	var s2_up = xs[5]
-	var s1_down = xs[6]
-	var s2_down = xs[7]
-	var closest_point = xs[8]
+	v_opt += shift
+	
+	var m1 = xs[0] + shift
+	var m2 = xs[1] + shift
+	var r1 = xs[2] 
+	var r2 = xs[3] 
+	var s1_up = xs[4] + shift
+	var s2_up = xs[5] + shift
+	var s1_down = xs[6] + shift
+	var s2_down = xs[7] + shift
+	var closest_point = xs[8] + shift
+	var u = xs[9] + shift
+	var n = xs[10] 
 
 	
-	draw_circle(m1, r1, Color.DARK_BLUE)
-	draw_circle(m2, r2, Color.DARK_BLUE)
-	draw_circle(v_opt, 8, Color.DARK_VIOLET)
-	draw_circle(closest_point, 8, Color.DARK_RED)
+	#draw_circle(m1, r1, Color.DARK_GREEN)
+	#draw_circle(m2, r2, Color.DARK_BLUE)
+	#draw_circle(v_opt, 8, Color.DARK_VIOLET)
+	#draw_circle(closest_point, 8, Color.DARK_RED)
 	
-	draw_line(s1_up, s2_up, Color.VIOLET, 3)
-	draw_line(s1_down, s2_down, Color.VIOLET, 3)
-	draw_line(s1_down, s1_up, Color.VIOLET, 3)
+	#draw_line(s1_up, s2_up, Color.VIOLET, 3)
+	#draw_line(s1_down, s2_down, Color.VIOLET, 3)
+	#draw_line(s1_down, s1_up, Color.VIOLET, 3)#
+	#draw_circle(s2_up, 3, Color.GREEN)
+	#draw_circle(s2_down, 3, Color.GREEN)
+	
+	#draw_line(s2_up, s2_down, Color.DARK_BLUE, 3)
+	
+	#var c_p = GeometryUtils.get_closest_point_on_line(s2_up, s2_down, m1)
+	#draw_circle(c_p, 3, Color.RED)
+	#draw_circle(m1, 3, Color.RED)
+	#draw_line(closest_point, (closest_point + 20*n), Color.GHOST_WHITE, 3)
 	
 	#[m1, m2, r1, r2, s1_up, s2_up, s1_down, s2_down]
 	#[m1, m2, r1, r2, s1_up, s2_up, s1_down, s2_down]
@@ -740,12 +772,12 @@ func _draw():
 	for edge in edges:
 		draw_circle(edge, 4, Color.BLUE)
 		
-	if shortest_path:
-		draw_line(fake_character["position"], shortest_path[0], Color.RED)
-		for i in range(len(shortest_path) - 1):
-			var start = shortest_path[i]
-			var end = shortest_path[i+1]
-			draw_line(start, end, Color.RED)
+	#if shortest_path:
+		#draw_line(fake_character["position"], shortest_path[0], Color.RED)
+		#for i in range(len(shortest_path) - 1):
+		#	var start = shortest_path[i]
+		#	var end = shortest_path[i+1]
+		#	draw_line(start, end, Color.RED)
 	
 	
 	for path in shortest_paths:
@@ -773,10 +805,11 @@ func _draw():
 	):
 		color = Color.RED
 		
-	draw_circle(fake_character["position"], 8, color)
+	#draw_circle(fake_character["position"], 8, color)
 	
 	for fake_char in fake_chars:
 		draw_circle(fake_char["position"], 8, Color.NAVY_BLUE)
+		draw_line(fake_char["position"], fake_char["position"] + fake_char["new_velocity"], Color.RED, 3 )
 	
 	if fake_character["local_path"]:
 		var path = fake_character["local_path"]
@@ -814,7 +847,22 @@ func _draw():
 			draw_circle(Vector2(x,y) + 8 * dir, 2, Color.RED)
 	
 	"""
-
+	
+	
+	#var xss = OrcaUtils.test_intersection_with_circle()
+	#var inter = xss[0]
+	#var m = xss[1]
+	#var r = xss[2]
+	#var hp = xss[3]
+	
+	
+	#draw_circle(m,r, Color.VIOLET)
+	#draw_circle(inter["left"], 8, Color.GREEN)
+	#draw_circle(inter["right"], 8, Color.RED)
+	#draw_circle(m + r* hp.l_dir, 8, Color.GREEN)
+	#draw_circle(m - r * hp.l_dir, 8, Color.RED)
+	#draw_circle(inter["right"], 8, Color.RED)
+	#draw_line(hp.p + 1000 * hp.l_dir, hp.p - 1000 * hp.l_dir, Color.CADET_BLUE, 3)
 		
 	#for pos in pos_to_walls:
 	#	if pos_to_walls[pos]:
@@ -863,3 +911,71 @@ func _draw():
 		for j in range(dim_y):
 			draw_circle(Vector2(i*8, j*8), 1, Color.BLACK)
 	"""
+	
+	var c1 = Vector2(500, 500)
+	var c2 = Vector2(550, 600)
+	var radius = 25
+	
+	#draw_circle(c1/2, radius/2, Color.WHITE)
+	#draw_circle(c2/2, radius/2, Color.WHITE)
+	
+	#var qs = OrcaUtils.determine_closest_point_on_wall_v_object(Vector2(0,0), c1, c2, radius, v, 2)
+	#draw_line(qs[0], 2 * qs[0]  , Color.WHITE, 3)
+	#draw_line(qs[1], 2 * qs[1], Color.WHITE, 3)
+	#draw_line(qs[0], qs[1], Color.WHITE, 3)
+	#draw_line(qs[4], qs[5], Color.WHITE, 3)
+	
+	#draw_circle(v, 5, Color.INDIGO)
+	#draw_circle(qs[2], 5, Color.RED)
+	#draw_line(qs[2], qs[2] + qs[3]*16, Color.OLIVE, 3)
+	
+	var w1 = Vector2(200, 200)
+	var w2 = Vector2(400, 500)
+	
+	var qs = OrcaUtils.determine_closest_point_on_wall_v_object(
+		pos,
+		w1,
+		w2,
+		8,
+		v,
+		1
+	)
+	
+	#draw_circle(pos, 8, Color.WHITE)
+	
+	draw_line(
+		w1,
+		w2,
+		Color.BLUE,
+		3
+	)
+	
+	return
+	
+	var u2 = qs[2]
+	var n2 = qs[3]
+	
+	draw_line(pos , pos + v, Color.AQUA)
+	draw_line(pos + v, pos + v + u2, Color.RED)
+	draw_line(pos + qs[4], pos + qs[5], Color.WHITE, 3)
+	
+	draw_circle(w1, 8,  Color.NAVY_BLUE)
+	draw_circle(w2, 8,  Color.NAVY_BLUE)
+	
+	draw_line(pos + v + u2, pos + v + u2 + n2*20, Color.WHITE)
+	draw_circle(pos + qs[1], 5, Color.RED)
+	draw_circle(pos + qs[0], 5, Color.RED)
+	draw_line(pos + qs[0], pos + 100 * qs[0], Color.WHITE, 3)
+	draw_line(pos + qs[1], pos + 100 * qs[1], Color.WHITE, 3)
+	draw_circle(pos + v + u2 + n2*20, 4,  Color.NAVY_BLUE)
+	#var a = Vector2(0,1)
+	#var b = Vector2(1,0)
+	#var c = Vector2(-1,0)
+	#var alpha = a.angle_to(c)
+	#var beta = b.angle_to(c)
+	#print("a to c: " + str(a.angle_to(c)))
+	#print("b to c: " + str(b.angle_to(c)))
+	#print(sign(alpha*beta))
+	
+	
+	

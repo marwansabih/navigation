@@ -128,7 +128,7 @@ static func get_dir(
 		var next_position = pos + dir * delta_t 
 		if GeometryUtils.in_polygons_range(polygons, radius, next_position):
 			return Vector2(0,0)
-		if next_position.distance_to(obs_pos) < 2*radius-2:
+		if next_position.distance_to(obs_pos) < 2 * radius-2:
 			return Vector2(0,0)
 		
 	return dir

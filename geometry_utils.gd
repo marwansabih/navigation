@@ -33,10 +33,11 @@ static func get_closest_point_on_line(
 ):
 	var dir : Vector2 = (l2 - l1).normalized()
 	var dir_90 = dir.rotated(PI/2)
-	var numerator = l1.y * dir.x - l1.x * dir.y + p.x * dir.y - p.y * dir.x
-	var denominator = dir.x * dir_90.y - dir_90.x * dir.y
-	var s = numerator / denominator
-	return p + s * dir_90
+	return get_intersection(l1, dir, p, dir_90)
+	#var numerator = l1.y * dir.x - l1.x * dir.y + p.x * dir.y - p.y * dir.x
+	#var denominator = dir.x * dir_90.y - dir_90.x * dir.y
+	#var s = numerator / denominator
+	#return p + s * dir_90
 
 static func get_time_overlaps(
 	p1: Vector2,
