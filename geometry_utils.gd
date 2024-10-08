@@ -1,6 +1,12 @@
 class_name GeometryUtils
 extends Node
 
+static func polar_angle(v: Vector2):
+	var angle = v.angle()
+	if angle < 0:
+		angle += 2*PI
+	return angle
+	
 static func get_intersection(
 	p1: Vector2,
 	dir1: Vector2,
