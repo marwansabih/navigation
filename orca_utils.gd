@@ -797,12 +797,15 @@ static func set_velocity(agent, others_all, walls_all):
 	var h_ps : Array[HalfPlane] = []
 	for other in others:
 		var opt_other = other["opt_velocity"]
+		if "new_velocity" in other: 
+			print("here")
+			opt_other = other["new_velocity"]
 		var p1 = agent["position"]
 		var p2 = other["position"]
-		var vs = closest_point_on_vo_boundary_2(p1, p2, 8, 8, 1.5, opt_vel - opt_other )
+		var vs = closest_point_on_vo_boundary_2(p1, p2, 8, 8, 1, opt_vel - opt_other )
 		var u: Vector2 = vs[2]
 		var n = vs[3]
-		var factor = 1
+		var factor = 1 #1/2
 		if opt_other == Vector2(0,0):
 			factor = 1.0		
 		
@@ -839,7 +842,7 @@ static func set_velocity(agent, others_all, walls_all):
 		)
 		h_ps.append(h_p)
 		
-	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 100)
+	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 200)
 	if not new_velocity:
 		new_velocity = Vector2(0,0)
 		agent["opt_velocity"] = new_velocity#Vector2(0,0)

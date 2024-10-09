@@ -555,7 +555,7 @@ func move_along_direction(
 		if path:
 			character["dir"] = pos.direction_to(path[0])
 			character["org_dir"] = pos.direction_to(path[0])
-	if path and path[0].distance_to(pos) < 3:
+	if path and path[0].distance_to(pos) < 10:
 		path.pop_front()
 		if path:
 			character["dir"] = pos.direction_to(path[0])
@@ -670,8 +670,10 @@ func _input(event):
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
 				pos = event.position
+				c1_ = event.position
 			MOUSE_BUTTON_RIGHT:
-				v = event.position - pos 
+				v = event.position - pos
+				opt_v = event.position - c1_ 
 		
 func _physics_process(delta):
 	OrcaUtils.test_randomized_bounded_lp_2()
@@ -691,6 +693,9 @@ func _physics_process(delta):
 		
 var v = Vector2(-20, -20)
 var pos = Vector2(200, 300)
+
+var c1_ = Vector2(250, 200)
+var opt_v = Vector2(80,0)
 	
 func _draw():
 	#var radius = 8
@@ -1126,12 +1131,10 @@ func _draw():
 		switch = true
 	#if orientation_2 < 0:
 	
-	var c1_ = Vector2(250, 200)
 	var c2_ = Vector2(300, 200)
 	var r1_ = 8
 	var r2_ = 8
 	var tau_ = 1.01
-	var opt_v = Vector2(80,0)
 	
 	var xxs = OrcaUtils.closest_point_on_vo_boundary(
 		c1_,
@@ -1169,6 +1172,8 @@ func _draw():
 	draw_circle(c1_ + opt_v + ts[2] + 20 * ts[3], 4, Color.BLUE)
 	draw_line(c1_ + ts[0], c1_ + ts[0]*10000, Color.WHITE, 3)
 	draw_line(c1_ + ts[1], c1_ + ts[1]*10000, Color.WHITE, 3)
+	
+	draw_line(c1_, c1_ + opt_v, Color.VIOLET, 2)
 	#	o_dir =  - o_dir
 	
 	
