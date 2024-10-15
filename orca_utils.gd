@@ -63,11 +63,6 @@ static func closest_point_on_vo_boundary(
 	
 	var min_dist = INF
 	
-	print(dir_out_2)
-	print(dir_out)
-	
-	print(s2_up)
-	print(s2_down)
 	
 	var circ_dir = GeometryUtils.get_closest_point_on_line(s2_up, s2_down, m1) - m1
 	
@@ -137,13 +132,29 @@ static func closest_point_on_vo_boundary_2(
 	opt_v
 ):
 	var m1 = (p2 - p1)/float(tau)
-	
 	var r1 = float(rA + rB) / tau
+	
+ 
+	
+	#if m1.length() < r1:
+	#	r1 = m1.length()
+	#	var n = (opt_v - m1).normalized()
+	#	return [Vector2(1,0), Vector2(1,0), m1 + n * r1 - opt_v, n]
 	
 	var ts = determine_tangent_to_circle(m1, r1)
 	
+	# if agents are touching each other tangent will become zero
+	if not ts[0]:
+		var n = -m1.normalized()
+		var u = m1 + r1 * n
+		return [ts[0], ts[1], u, n] 
+	
 	var t1 = ts[0]
 	var t2 = ts[1]
+	
+	#if m1.length() <= r1:
+	#	return [t1, t2 ,-m1, -m1.normalized()]
+	
 	#if not t1:
 	#	return Vector2(0,0)
 	#if not t2:
@@ -175,15 +186,14 @@ static func closest_point_on_vo_boundary_2(
 		ns += [n1]
 		us += [u1]
 	
-	var n1 = -m1.normalized()
+	#var n1 = -m1.normalized()
 	
-	us += [m1 + r1* n1 ]
-	ns += [n1]
+	#us += [m1 + r1* n1 ]
+	#ns += [n1]
 		
 	var dist = INF
 	var u = null
 	var n = null
-	print(len(ns))
 	for i in range(len(ns)):
 		var u_c = us[i]
 		var dist_c = u_c.distance_to(opt_v)
@@ -192,6 +202,15 @@ static func closest_point_on_vo_boundary_2(
 			u = u_c
 			n = ns[i]
 	
+	if u == null:
+		print("warning no u")
+		print(m1)
+		print(r1)
+		print(m1.length())
+		print(t1)
+		print(t2)
+		print(us)
+		print(ns)
 	
 	return [t1, t2, u - opt_v, n]
 
@@ -220,14 +239,10 @@ static func element_of(half_plane: HalfPlane, p: Vector2):
 
 static func left_bounded(half_plane: HalfPlane, org_plane: HalfPlane):
 	
-	
-	
 	var orientation = half_plane.p_dir.x
 	var orientation_2 = org_plane.p_dir.x
 	var p_dir = half_plane.p_dir
 	var o_dir = org_plane.p_dir
-	
-	#print(p_dir)
 	
 	p_dir.y = -p_dir.y
 	o_dir.y = -o_dir.y
@@ -241,14 +256,6 @@ static func left_bounded(half_plane: HalfPlane, org_plane: HalfPlane):
 	
 	var angle = GeometryUtils.polar_angle(p_dir)
 	var angle_2 = GeometryUtils.polar_angle(o_dir)
-	
-	#print(p_dir)
-	
-	#print(angle)
-	
-	#print(switch)
-	#print(p_dir)
-	#print(angle)
 	
 	if angle_2 > angle and p_dir.y < 0:
 		return switch
@@ -407,11 +414,10 @@ static func evaluate_constraints(
 	var v_up = Vector2(0, INF)
 	var v_down = Vector2(0, -INF)
 
-	#print("half_plane: " + str(half_plane.p))
 	for idx in half_planes.size():
 		var c = g_c
 		if idx <4:
-			c =  g_c * 10000000
+			c =  g_c.normalized() * 10000000
 		var h_p = half_planes[idx]
 		var intersection = GeometryUtils.get_intersection(
 			half_plane.p,
@@ -419,9 +425,15 @@ static func evaluate_constraints(
 			h_p.p,
 			h_p.l_dir
 		)
-		#print("intersection with " + str(h_p.p) + ": " + str(intersection))
+
 		if intersection == null:
+			#if half_planes.size() == 5:
+			#	print("no intersection found")
 			continue
+		#else:
+		#	print("instersection found")
+		#	print(left_bounded(h_p, half_plane))
+		#	print(right_bounded(h_p, half_plane))
 		
 		if left_bounded(h_p, half_plane):
 			if intersection != null and v_left.x < intersection.x:
@@ -447,6 +459,43 @@ static func evaluate_constraints(
 			elif intersection != null and v_down.y == intersection.y:
 				if intersection.distance_to(c) > v_down.distance_to(c):
 					v_down = intersection
+	
+	var left = -INF
+	var right = INF
+	var up = INF
+	var down = -INF
+	if v_left != null:
+		left = v_left.x
+	if v_right != null:
+		right = v_right.x
+	if v_up != null:
+		up = v_up.y
+	if v_down != null:
+		down = v_down.y
+		
+	var closest_point = GeometryUtils.get_closest_point_on_line(
+		half_plane.p,
+		half_plane.p +  half_plane.l_dir,
+		g_c
+	)
+	
+	if closest_point != null and closest_point.x > left and closest_point.x < right and closest_point.y  < up and closest_point.y > down:
+		
+		#if half_planes.size() == 5:
+		#	print("nr planes")
+		#	print(half_planes.size())
+		#	print("left")
+		#	print(left)
+		#	print("right")
+		#	print(right)
+		#	print("up")
+		#	print(up)
+		#	print("down")
+		#	print(down)
+		if g_c.length() + delta_v < closest_point.length():
+			return null
+		
+		return closest_point
 	
 	#print()
 	#print("opt_c" + str(org_c))
@@ -570,21 +619,7 @@ static func evaluate_constraints(
 	
 	var v = null
 	
-	var closest_point = GeometryUtils.get_closest_point_on_line(half_plane.p, half_plane.l_dir, g_c)
-	var left = -INF
-	var right = INF
-	var up = INF
-	var down = -INF
-	if v_left != null:
-		left = v_left.x
-	if v_right != null:
-		right = v_right.x
-	if v_up != null:
-		up = v_up.y
-	if v_down != null:
-		down = v_down.y
-	#if closest_point != null and closest_point.x > left and closest_point.x < right and closest_point.y  < up and closest_point.y > down:
-	#	return closest_point
+	
 	
 	for inter in [v_left, v_right, v_up, v_down]:
 		if inter == null:
@@ -596,7 +631,6 @@ static func evaluate_constraints(
 			v = inter
 			min = value
 			
-	#print(v)
 			
 	return v
 
@@ -652,20 +686,10 @@ static func randomized_bounded_lp(
 	var found_vs = []
 	
 	for i in range(nr_planes):
-		#var p = half_planes[i+4].p
-		#var dir = half_planes[i+4].l_dir
-		#var v_opt_approx = GeometryUtils.get_closest_point_on_line(p, p + dir, v_opt)
-		#var dist_approx = v_opt_approx.distance_to(v_opt)
-		#var dist_current = v_opt.distance_to(v)
 		if element_of(half_planes[i+4], v): #and dist_current >= dist_current:
 			continue
 		var h_ps = half_planes.slice(0, i + 4) 
-		#var h_ps_2 = half_planes.slice(i+5, nr_planes + 4)
-		#for hp in h_ps:
-		#	print("hp" + str(hp.p))
-		#print("HP 2: " + str(i+5) + " " + str(nr_planes))
-		#for hp in h_ps_2:
-		#	print("hp" + str(hp.p))
+		
 		v = evaluate_constraints(
 			h_ps, #+ h_ps_2,
 			half_planes[i+4],
@@ -673,24 +697,9 @@ static func randomized_bounded_lp(
 			delta_v,
 			i + 5 == nr_planes + 4
 		)
-		#found_vs.append(v)
 		if v == null:
-			#print("in return")
-			#print("*****************")
 			return null
-	#var min = INF
-	#print(found_vs)
-	#for v_new in found_vs:
-	#	if v_new == null:
-	#		continue
-	#	var dist = v_new.distance_to(c) 
-	#	if v_new.length() > 100:
-	#		dist -= 1000
-	#	if dist < min:
-	#		v = v_new
-	#		min = dist
-	#print("final v is " + str(v))
-	#print("*******************") 
+			
 	return v
 
 static func test_randomized_bounded_lp():
@@ -738,9 +747,6 @@ static func test_randomized_bounded_lp():
 		c,
 		30
 	)
-	#print("p is: " + str(p))
-	#print("*****************************")
-	#print()
 	
 static func test_randomized_bounded_lp_2():
 	var plane_1 = HalfPlane.new(
@@ -767,9 +773,6 @@ static func test_randomized_bounded_lp_2():
 		c,
 		20
 	)
-	#print("final v is: " + str(p))
-	#print("*****************************")
-	#print()
 	
 	
 static func set_velocity(agent, others_all, walls_all):
@@ -796,28 +799,27 @@ static func set_velocity(agent, others_all, walls_all):
 	var opt_vel = agent["opt_velocity"]
 	var h_ps : Array[HalfPlane] = []
 	for other in others:
-		var opt_other = other["opt_velocity"]
+		var opt_other = Vector2(0,0)
 		if "new_velocity" in other: 
-			print("here")
 			opt_other = other["new_velocity"]
 		var p1 = agent["position"]
 		var p2 = other["position"]
-		var vs = closest_point_on_vo_boundary_2(p1, p2, 8, 8, 1, opt_vel - opt_other )
+		var vs = closest_point_on_vo_boundary_2( p1, p2, 8, 8, 1, opt_vel - opt_other )
 		var u: Vector2 = vs[2]
 		var n = vs[3]
 		var factor = 1 #1/2
 		if opt_other == Vector2(0,0):
 			factor = 1.0		
 		
-		#print("val u: " + str(u))
-		#print("val opt vel " + str(opt_vel))
-		#print("angle " + str(u.angle_to(opt_vel)) )
 		var h_p = HalfPlane.new(
 			opt_vel + factor * u,
 			n.rotated(-PI/2),
 			n
 		)
 		h_ps.append(h_p)
+		
+	
+		
 	for wall in walls:
 		var w1 = wall[0]
 		var w2 = wall[1]
@@ -832,9 +834,6 @@ static func set_velocity(agent, others_all, walls_all):
 		var u: Vector2 = vs[2]
 		var n = vs[3]	
 		
-		#print("val u: " + str(u))
-		#print("val opt vel " + str(opt_vel))
-		#print("angle " + str(u.angle_to(opt_vel)) )
 		var h_p = HalfPlane.new(
 			opt_vel + u,
 			n.rotated(-PI/2),
@@ -842,7 +841,7 @@ static func set_velocity(agent, others_all, walls_all):
 		)
 		h_ps.append(h_p)
 		
-	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 200)
+	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 50)
 	if not new_velocity:
 		new_velocity = Vector2(0,0)
 		agent["opt_velocity"] = new_velocity#Vector2(0,0)
@@ -854,6 +853,7 @@ static func set_opt_velocities(agents: Array, paths: Array):
 		var path = paths[i]
 		if not path:
 			agents[i]["opt_velocity"] = Vector2(0,0)
+			agents[i]["new_velocity"] = Vector2(0,0)
 			continue
 		var dir = agents[i]["position"].direction_to(path[0])
 		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
@@ -863,6 +863,12 @@ static func set_velocities(agents : Array, paths: Array, walls: Array):
 	set_opt_velocities(agents, paths)
 	var nr_agents = len(agents)
 	for i in range(nr_agents):
+			var agent = agents[i]
+			var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
+			set_velocity(agent, others, walls)
+	for i in range(nr_agents):
+		if not agents[i]["new_velocity"]:
+			continue
 		var agent = agents[i]
 		var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
 		set_velocity(agent, others, walls)
@@ -874,7 +880,6 @@ static func determine_tangent_to_circle(c, r: float):
 	var p1 = p_2 - sqrt( p_2**2 - q )
 	#p1 = p_2 + sqrt( p_2**2 - q )
 	var p2 = sqrt( r**2 - (p1 -c.x)**2) + c.y
-	#print("p2: "+ str(p1) + " " + str(p2))
 	var d = c.length()
 	var s1 = (1.0 - r**2/d**2) * c 
 	var s2 = sqrt(d**2 - r**2)* r/d**2 * Vector2(c.y, -c.x)
@@ -907,7 +912,6 @@ static func determine_closest_point_on_wall_v_object(pos: Vector2, w1: Vector2, 
 	var us = []
 	var ns = []
 	if on_half_line(t1, 2 * t1, v ):
-		#print("on segment t1")
 		var n1 = outside_normal(Vector2(0, 0), t1, c1)
 		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t1, v)
 		# Edge cases
@@ -916,45 +920,27 @@ static func determine_closest_point_on_wall_v_object(pos: Vector2, w1: Vector2, 
 		ns += [n1]
 		us += [u1]
 	if  on_half_line(t2, 2 * t2, v ):
-		#print("on segment t2")
 		var n2 = outside_normal(Vector2(0, 0), t2, c2)
 		var u2 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t2, v)
 		ns += [n2]
 		us += [u2]
 	if on_segment(c1, c2, v):
-		#print("between circle")
 		var u1 = GeometryUtils.get_closest_point_on_line(c1_n, c2_n, v)
 		ns += [n1_n]
 		us += [u1]
 	if not on_segment(c1, c2, v) and not on_segment(t1, 100000 * t1.normalized(), v):
-		#print("Im here circle 1")
 		var n1 = (v - c1).normalized()
 		var u1 = c1 + n1 * r
 		ns += [n1]
 		us += [u1]
 	if not on_segment(c1, c2, v) and not on_segment(t2, 100000 * t2.normalized(), v):
-		#print("Im here circle 2")
 		var n1 = (v - c2).normalized()
 		var u1 = c2 + n1 * r
 		ns += [n1]
 		us += [u1]
-	#print("outside")
+
 	ns += [n1_n, n1_n, outside_normal(Vector2(0, 0), t1, c1), outside_normal(Vector2(0, 0), t2, c2)]
 	us += [c1_n, c2_n, t1, t2]
-	#elif (v-t1).dot(dir) < 0:
-	#	var n1 = (v - c1).normalized()
-	#	var u1 = c1 + n1 * r
-	#	var n2 = (v - c2).normalized()
-	#	var u2 = c2 + n2 * r
-	#	ns += [n1, n2]
-	#	us += [u1, u2]
-	#else:
-	#	var n1 = outside_normal(Vector2(0, 0), t1, c1)
-	#	var u1 : Vector2 = t1
-	#	var n2 = outside_normal(Vector2(0, 0), t1, c1)
-	#	var u2 = t2
-	#	ns += [n1, n2]
-	#	us += [u1, u2]
 		
 	var dist = INF
 	for i in range(len(ns)):
@@ -1007,18 +993,13 @@ static func find_opt_v(H,c):
 	var hps : Array = [m1, m2] + H
 	
 	for i in H.size():
-		print("H[i] " + str(H[i].p))
 		if element_of(H[i], v):
-			print("continue")
 			continue
 		v = max_v(H[i], hps.slice(0, i+2), c)
-		print("other planes")
-		for h in hps.slice(0, i+2):
-			print(h.p)
-		print("end")
+		#for h in hps.slice(0, i+2):
+		#	print(h.p)
 		if v == null:
 			return Vector2(0,0)
-		print(v)
 	return v
 		
 	

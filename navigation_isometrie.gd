@@ -70,7 +70,6 @@ func generate_source_velocity(pos, loc, strength, dist_power):
 	var dist = pos.distance_to(loc)
 	var v_x =  p_x/sqrt(p_x**2 + p_y**2)
 	var v_y =  p_y/sqrt(p_x**2 + p_y**2)
-	#print(Vector2(v_x, v_y).length())
 	return strength / dist**dist_power * Vector2(v_x,v_y) * ( 1 +  randf())
 
 func get_local_dir(pos: Vector2, goal: Vector2, delta):
@@ -96,7 +95,6 @@ func get_local_dir(pos: Vector2, goal: Vector2, delta):
 	for actor in fake_chars:
 		var f_pos = actor["position"]
 		if pos.distance_to(f_pos) > 0.01:
-			#print("f_pos" + str(f_pos))
 			actor_positions.append(f_pos)
 		#break
 	
@@ -194,10 +192,7 @@ func get_edge_point(
 	if inside_polygons(b, polys):
 		b = point + to_b
 	var f = ((b.y - e.y)*dir_1.x+ dir_1.y*(e.x-b.x))/(dir_2.y*dir_1.x-dir_2.x*dir_1.y)
-	#print(f)
-	#print(e + f * dir_2))
-	#return b
-	#return e
+
 	return e + f * dir_2
 	return point -(dir_1 - dir_1.dot(dir_2) * dir_2).normalized() * corner_distance #e #+ f * dir_2
 	
@@ -574,7 +569,23 @@ func move_along_direction(
 			#build_position_graph(pos, path[0])
 			character["dir"] = new_dir
 		"""
-		character["position"] += character["new_velocity"] * delta#velocity * character["dir"] * delta
+		var factor = 1
+		for char in fake_chars:
+			if char == character:
+				continue
+			var next_pos =  character["position"] + character["new_velocity"] * delta
+			if char["position"].distance_to(next_pos) <  16:
+				print ("warning warning warning")
+				print(char["position"])
+				print(character["position"])
+				print(char["new_velocity"])
+				print(character["new_velocity"])
+				print(char["opt_velocity"])
+				print(character["opt_velocity"])
+				print ("warning warning warning")
+				factor = 0
+				
+		character["position"] += character["new_velocity"] * delta * factor#velocity * character["dir"] * delta
 		cycle += 1
 		#character["position"] += velocity * character["dir"] * delta
 	
@@ -650,6 +661,8 @@ func _ready():
 		shortest_paths.append(short_path)
 	
 	
+	OrcaUtils.set_velocities(fake_chars, shortest_paths, walls)
+	
 	#generate_fake_characters()
 	#setup_actor_position_mesh()
 	#put_characters_to_mesh()
@@ -676,8 +689,14 @@ func _input(event):
 				opt_v = event.position - c1_ 
 		
 func _physics_process(delta):
-	OrcaUtils.test_randomized_bounded_lp_2()
+	#OrcaUtils.test_randomized_bounded_lp_2()
 	queue_redraw()
+	
+	for i in range(len(fake_chars)):
+		var f_c = fake_chars[i]
+		var s_p = shortest_paths[i]
+		move_along_direction(f_c, s_p, delta)
+	
 	OrcaUtils.set_velocities(fake_chars, shortest_paths, walls)
 	
 	#move_along_direction(
@@ -685,16 +704,13 @@ func _physics_process(delta):
 	#	shortest_path,
 	##	delta
 	#)
-	
-	for i in range(len(fake_chars)):
-		var f_c = fake_chars[i]
-		var s_p = shortest_paths[i]
-		move_along_direction(f_c, s_p, delta)
+
 		
 var v = Vector2(-20, -20)
 var pos = Vector2(200, 300)
 
-var c1_ = Vector2(250, 200)
+#var c1_ = Vector2(250, 200)
+var c1_ = Vector2(768.4091, 379.506)
 var opt_v = Vector2(80,0)
 	
 func _draw():
@@ -1000,16 +1016,10 @@ func _draw():
 		n2
 	)
 	
-	#print("half_plane_1")
-	#print(v + u2)
-	#print(n2)
 	
 	u2 = qs_2[2]
 	n2 = qs_2[3]
 	
-	#print("half_plane_2")
-	#print(v + u2)
-	#print(n2)
 	
 	var half_plane_2 = OrcaUtils.HalfPlane.new(
 		v +  u2,
@@ -1040,7 +1050,6 @@ func _draw():
 		50
 	)
 	
-	#print(new_velocity)
 	
 	if not new_velocity:
 		new_velocity = Vector2(0,0)
@@ -1049,26 +1058,18 @@ func _draw():
 	
 	#OrcaUtils.test_find_opt_v()
 	
-	#print("Test angle to")
-	#print(Vector2(1,0).angle_to(Vector2(-1,-0.1)))
 	
 	var o_dir = Vector2(1, 1)
 	var p_dir = Vector2(0, -1).normalized()
 	
 	var orientation = o_dir.x
-	#print(orientation)
 	
-	#if orientation * o_dir.angle_to(p_dir) < 0:
-	#	print("left_bounded")
 	
 	#var a = Vector2(0,1)
 	#var b = Vector2(1,0)
 	#var c = Vector2(-1,0)
 	#var alpha = a.angle_to(c)
 	#var beta = b.angle_to(c)
-	#print("a to c: " + str(a.angle_to(c)))
-	#print("b to c: " + str(b.angle_to(c)))
-	#print(sign(alpha*beta))
 	var dir = Vector2(2,-1)
 		
 	var hp = OrcaUtils.HalfPlane.new(
@@ -1100,7 +1101,6 @@ func _draw():
 		
 		var c = Color.GREEN
 		
-		#print(hp.p_dir)
 		
 		if OrcaUtils.right_bounded(hp, hp2):
 			c = Color.RED
@@ -1122,7 +1122,7 @@ func _draw():
 	#var pos_2 =  Vector2(550, 240) + dir * 100
 	#draw_line(pos_1, pos_2, Color.BLUE, 3)
 		
-		
+	return	
 	#var orientation_2 = half_plane.p_dir.x
 	#var o_dir = org_plane.p_dir
 	var switch = false
@@ -1131,51 +1131,123 @@ func _draw():
 		switch = true
 	#if orientation_2 < 0:
 	
-	var c2_ = Vector2(300, 200)
 	var r1_ = 8
 	var r2_ = 8
-	var tau_ = 1.01
+	var r3_ = 8
 	
-	var xxs = OrcaUtils.closest_point_on_vo_boundary(
-		c1_,
-		c2_,
-		r1_,
-		r2_,
-		tau_,
-		opt_v
-	)
+	var tau_ = 1.0
+	
 	
 	#[m1, m2, r1, r2, s3_up, s2_up, s3_down, s2_down, closest_point, u, n]
 	
 	draw_circle(c1_, 8, Color.NAVY_BLUE)
-	draw_circle(c2_, 16, Color.INDIGO)
 	
-	#[m1, m2, r1, r2, s3_up, s2_up, s3_down, s2_down, closest_point, u, n]
+	var c2_ = Vector2(300, 200)
+	var c3_ = Vector2(320, 210)
+	var c4_ = Vector2(340, 220)
+	var c5_ = Vector2(380, 240)
+	var c6_ = Vector2(752.8511, 383.3361)
 	
-	#draw_circle(c1_ +  xxs[8],4, Color.YELLOW )
+	var cs_ = [c2_, c3_, c4_, c5_, c6_]
 	
-	var ts = OrcaUtils.closest_point_on_vo_boundary_2(
-		c1_,
-		c2_,
-		r1_,
-		r2_,
-		1,
-		opt_v
+	var hps_ : Array[OrcaUtils.HalfPlane] = []
+	
+	
+	for c in cs_:
+	
+		draw_circle(c, 16, Color.INDIGO)
+	
+		#var xxs = OrcaUtils.closest_point_on_vo_boundary(
+		#	c1_,
+		#	c,
+		#	r1_,
+		#	r2_,
+		#	tau_,
+		#	opt_v
+		#)
+	
+		#[m1, m2, r1, r2, s3_up, s2_up, s3_down, s2_down, closest_point, u, n]
+	
+		#draw_circle(c +  xxs[8],4, Color.YELLOW )
+	
+		var ts = OrcaUtils.closest_point_on_vo_boundary_2(
+			c1_,
+			c,
+			r1_,
+			r2_,
+			1,
+			opt_v
+		)
+	
+		draw_circle(c1_ + ts[0], 2, Color.YELLOW)
+		draw_circle(c1_ + ts[1], 2, Color.YELLOW)
+		draw_line(c1_ + ts[2] + opt_v, c1_ + opt_v + ts[2] + 20 * ts[3], Color.RED, 1)
+		draw_circle(c1_ + opt_v + ts[2] + 20 * ts[3], 4, Color.BLUE)
+		draw_line(c1_ + ts[0], c1_ + ts[0]*10000, Color.WHITE, 3)
+		draw_line(c1_ + ts[1], c1_ + ts[1]*10000, Color.WHITE, 3)	
+		draw_line(c1_, c1_ + opt_v, Color.VIOLET, 2)
+	
+		var hp_ = OrcaUtils.HalfPlane.new(
+			opt_v + ts[2],
+			ts[3].rotated(PI/2),
+			ts[3]
+		)
+		
+		hps_.append(hp_)
+	
+		draw_line(c1_ + ts[2] + opt_v, c1_ + ts[2] + opt_v + ts[3].rotated(PI/2) * 50, Color.RED, 3)
+		draw_line(c1_ + ts[2] + opt_v, c1_ + ts[2] + opt_v - ts[3].rotated(PI/2) * 50, Color.RED, 3)
+	
+	var v_ = OrcaUtils.randomized_bounded_lp(
+		hps_,
+		opt_v,
+		opt_v,
+		50
 	)
 	
-	draw_circle(c1_ + ts[0], 2, Color.YELLOW)
-	draw_circle(c1_ + ts[1], 2, Color.YELLOW)
-	#draw_circle(c1_ + ts[2], 2, Color.YELLOW)
-	#print("ts3")
-	#print(ts[3])
-	draw_line(c1_ + ts[2] + opt_v, c1_ + opt_v + ts[2] + 20 * ts[3], Color.RED, 1)
-	draw_circle(c1_ + opt_v + ts[2] + 20 * ts[3], 4, Color.BLUE)
-	draw_line(c1_ + ts[0], c1_ + ts[0]*10000, Color.WHITE, 3)
-	draw_line(c1_ + ts[1], c1_ + ts[1]*10000, Color.WHITE, 3)
+	if not v_:
+		v_ = Vector2(0,0)
+	#print("outside_v")
+	#print(hp_.p)
+	#print(v_)
+	#print(v_)
 	
-	draw_line(c1_, c1_ + opt_v, Color.VIOLET, 2)
-	#	o_dir =  - o_dir
+	draw_line(
+		c1_,
+		c1_ + v_,
+		Color.LAWN_GREEN,
+		3
+	)
 	
+	var agent_1 = {
+		"position": Vector2(177.6088, 312.1458),
+		"new_velocity": Vector2(0,0),
+		"opt_velocity":Vector2(-4.745203, 49.77432)
+	}
 	
+	var agent_2 = {
+		"position": Vector2(163.3748, 304.0786),
+		"new_velocity": Vector2(0,0),
+		"opt_velocity":Vector2(11.27111, 48.71306)
+	}
 	
+	"""
+	var paths = agent_1["position]
 	
+	OrcaUtils.set_velocities(
+		[agent_1, agent_2],
+		[]
+	)
+	"""
+	
+	var v = OrcaUtils.closest_point_on_vo_boundary_2(
+		Vector2(483.7, 401.763),
+		Vector2(499.079, 406.179),
+		8,
+		8,
+		1,
+		Vector2(38.987, 31.305)
+	)
+	#print(Vector2(483.7, 401.763).distance_to(Vector2(499.079, 406.179)))
+	
+	print(v)
