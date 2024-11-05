@@ -236,13 +236,13 @@ static func isometric_distance(p,q):
 	return sqrt(d.x**2/2 + 2 * d.y**2)
 
 
-static func get_closest_mesh_position(position):
-	var dx = int(position.x) % 8
-	var dy = int(position.y) % 8
-	if dx > 4:
-		dx + 8
-	if dy > 4:
-		dy + 8
+static func get_closest_mesh_position(position, grid_size):
+	var dx = int(position.x) % grid_size
+	var dy = int(position.y) % grid_size
+	if dx > grid_size/2:
+		dx + grid_size
+	if dy > grid_size/2:
+		dy + grid_size
 	var x = int(position.x) - dx
 	var y = int(position.y) - dy
 	return Vector2(x,y)

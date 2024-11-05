@@ -2,8 +2,8 @@ extends Node2D
 
 var point
 
-var dim_x = 200
-var dim_y = 200
+var dim_x = 800
+var dim_y = 800
 
 var base_mesh = []
 var occupancy_mesh = []
@@ -18,6 +18,9 @@ var walls = []
 
 var small_polygons = []
 
+var mesh_grid_size = 16
+
+
 func setup_small_polygons():
 	for p in $Poly.get_children():
 		#var poly = generate_polygon_edges(p, 12)
@@ -26,7 +29,7 @@ func setup_small_polygons():
 func setup_pos_to_wall():
 	for i in range(dim_x):
 		for j in range(dim_y):
-			pos_to_walls[Vector2(8*i, 8*j)] = []
+			pos_to_walls[Vector2(mesh_grid_size*i, mesh_grid_size*j)] = []
 	
 	for polygon in $Poly.get_children():
 		var poly = polygon.polygon
@@ -73,12 +76,12 @@ func generate_source_velocity(pos, loc, strength, dist_power):
 	return strength / dist**dist_power * Vector2(v_x,v_y) * ( 1 +  randf())
 
 func get_local_dir(pos: Vector2, goal: Vector2, delta):
-	var pos_m = GeometryUtils.get_closest_mesh_position(pos)
+	var pos_m = GeometryUtils.get_closest_mesh_position(pos, mesh_grid_size)
 	var map_polys = []
 	var actor_positions = []
 	for i in range(9):
 		for j in range(9):
-			var delta_pos = Vector2((i-4)*8, (j-4)*8) + pos_m
+			var delta_pos = Vector2((i-mesh_grid_size/2)*mesh_grid_size, (j-mesh_grid_size/2)*mesh_grid_size) + pos_m
 			if not delta_pos in actor_position_mesh:
 				continue
 			if true:
@@ -304,11 +307,11 @@ func intersects_with_polys(polies, p, q):
 
 func build_position_graph(pos, goal):
 	var actor_positions = []
-	var pos_m = GeometryUtils.get_closest_mesh_position(pos)
+	var pos_m = GeometryUtils.get_closest_mesh_position(pos, mesh_grid_size)
 	var map_polys = []
 	for i in range(9):
 		for j in range(9):
-			var delta_pos = Vector2((i-4)*8, (j-4)*8) + pos_m
+			var delta_pos = Vector2((i-mesh_grid_size/2)*mesh_grid_size, (j-mesh_grid_size/2)*mesh_grid_size) + pos_m
 			if not delta_pos in actor_position_mesh:
 				continue
 			map_polys.append_array(polygon_position_mesh[delta_pos])
@@ -393,7 +396,7 @@ func generate_position_to_visible_edges_2():
 	for i in range(dim_x):
 		for j in range(dim_y):
 			var visible_edges = []
-			var pos = Vector2(i*8, j*8)
+			var pos = Vector2(i*mesh_grid_size, j*mesh_grid_size)
 			for k in range(len(edges)):
 				if not inside_polygons(pos, shadow_polygons[k]):
 					visible_edges.append(k)
@@ -401,10 +404,10 @@ func generate_position_to_visible_edges_2():
 	return 
 	for key in position_to_visible_edges.keys():
 		if not position_to_visible_edges[key]:
-			var up = Vector2(key.x, key.y + 8)
-			var down = Vector2(key.x, key.y - 8)
-			var left = Vector2(key.x - 8, key.y)
-			var right = Vector2(key.x + 8, key.y)
+			var up = Vector2(key.x, key.y + mesh_grid_size)
+			var down = Vector2(key.x, key.y - mesh_grid_size)
+			var left = Vector2(key.x - mesh_grid_size, key.y)
+			var right = Vector2(key.x + mesh_grid_size, key.y)
 			for dir in [up, down, right, left]:
 				if dir in position_to_visible_edges:
 					position_to_visible_edges[key] = position_to_visible_edges[dir] #[GeometryUtils.get_closest_edge(edges, key)]
@@ -412,7 +415,7 @@ func generate_position_to_visible_edges_2():
 func generate_position_to_visible_edges():
 	for i in range(dim_x):
 		for j in range(dim_y):
-			var pos = Vector2(i*8, j*8)
+			var pos = Vector2(i*mesh_grid_size, j*mesh_grid_size)
 			add_visible_edges(pos)
 
 func subdivide_shortest_path(path):
@@ -438,8 +441,8 @@ func shortest_path_between_positions(
 	if not intersect_with_occupied_polygons(p1, p2):
 		return [p1,p2]
 	
-	var p1_m = GeometryUtils.get_closest_mesh_position(p1)
-	var p2_m = GeometryUtils.get_closest_mesh_position(p2)
+	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
+	var p2_m = GeometryUtils.get_closest_mesh_position(p2, mesh_grid_size)
 	
 	var neigh_1 = position_to_visible_edges[p1_m]
 	var neigh_2 = position_to_visible_edges[p2_m]
@@ -478,7 +481,7 @@ var fake_character = {
 var fake_chars = []
 
 func generate_fake_chars():
-	#return
+	return
 	for i in range(8):
 		var char = {
 			"velocity" =50,
@@ -528,7 +531,7 @@ func generate_fake_characters():
 	
 func put_characters_to_mesh():
 	for char in fake_characters:
-		var pos = GeometryUtils.get_closest_mesh_position(char)
+		var pos = GeometryUtils.get_closest_mesh_position(char, mesh_grid_size)
 		if pos in actor_position_mesh:
 			actor_position_mesh[pos].append(char)
 		
@@ -619,6 +622,7 @@ var shortest_paths = []
 	
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	return
 	setup_small_polygons()
 	setup_pos_to_wall()
 	generate_fake_chars()
@@ -691,6 +695,7 @@ func _input(event):
 func _physics_process(delta):
 	#OrcaUtils.test_randomized_bounded_lp_2()
 	queue_redraw()
+	return
 	
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
@@ -714,6 +719,132 @@ var c1_ = Vector2(768.4091, 379.506)
 var opt_v = Vector2(80,0)
 	
 func _draw():
+	
+	var area = [
+		100*Vector2(0,0),
+		100*Vector2(0,1),
+		100*Vector2(1,1),
+		100*Vector2(1,0)
+	]
+	
+	var polys = [
+		100*Vector2(0.5, 0.0),
+		100*Vector2(0.5, 0.75),
+		100*Vector2(1.2, 0.75),
+		100*Vector2(1.2, 0.0)
+	]
+	
+	var polys_1 = [
+		100*Vector2(0.5, -0.5),
+		100*Vector2(0.5, 0.75),
+		100*Vector2(1.5, 0.75),
+		100*Vector2(1.5, -0.5)
+	]
+	
+	
+	# Not working right now
+	var polys_2 = [
+		100*Vector2(0.5, -0.5),
+		100*Vector2(0.5, 0.75),
+		100*Vector2(0.75, 0.75),
+		100*Vector2(0.75, -0.5)
+	] 
+	
+	var polys_3 = [
+		100*Vector2(-0.5, -0.5),
+		100*Vector2(-0.5, 0.75),
+		100*Vector2(0.75, 0.75),
+		100*Vector2(0.75, -0.5)
+	]
+	
+	var polys_4 = [
+		100*Vector2(-0.5, 0.5),
+		100*Vector2(-0.5, 0.75),
+		100*Vector2(0.75, 0.75),
+		100*Vector2(0.75, 0.5)
+	]
+	
+	var polys_5 = [
+		100*Vector2(-0.5, 0.5),
+		100*Vector2(-0.5, 1.75),
+		100*Vector2(0.75, 1.75),
+		100*Vector2(0.75, 0.5)
+	]
+	
+	var polys_6 = [
+		100*Vector2(0.5, 0.5),
+		100*Vector2(0.5, 1.75),
+		100*Vector2(0.75, 1.75),
+		100*Vector2(0.75, 0.5)
+	]
+	
+	var polys_7 = [
+		100*Vector2(0.5, 0.5),
+		100*Vector2(0.5, 1.75),
+		100*Vector2(1.75, 1.75),
+		100*Vector2(1.75, 0.5)
+	]
+	
+	var polys_8 = [
+		100*Vector2(0.5, 0.25),
+		100*Vector2(0.5, 0.75),
+		100*Vector2(1.75, 0.75),
+		100*Vector2(1.75, 0.25)
+	]
+	
+	var polys_9 = [
+		100*Vector2(-0.25, 0.50),
+		100*Vector2(-0.25, 1.25),
+		100*Vector2(1.25, 1.25),
+		100*Vector2(1.25, -0.25),
+		100*Vector2(0.75, 0.25),
+		100*Vector2(0.8, 0.7),
+		100*Vector2(0.6, 0.85),
+		100*Vector2(0.25, 0.25)
+	]
+	
+	
+	var used_polygon = polys_9
+	
+	var new_area = PolygonUtils.reshape_area(area, used_polygon, 100 , 100)
+	
+	for i in range( area.size()):
+		var next_i = (i+1) % area.size()
+		draw_line(area[i] + Vector2(50,50), area[next_i] + Vector2(50,50), Color.RED, 3)
+		
+	for i in range( used_polygon.size()):
+		var next_i = (i+1) % used_polygon.size()
+		draw_line(used_polygon[i] + Vector2(50,50), used_polygon[next_i] + Vector2(50,50), Color.DARK_GREEN, 3)
+	
+	
+	for i in range( new_area.size()):
+		var next_i = (i+1) % new_area.size()
+		draw_line(new_area[i] + Vector2(50,50), new_area[next_i] + Vector2(50,50), Color.BLUE, 3)
+	
+	return
+	
+	var triangle_clockwise = [Vector2(0,0), Vector2(50,50), Vector2(100,0)]
+	var triangle_counter_clockwise = [Vector2(0,0), Vector2(100,0), Vector2(50,50)]
+
+	
+	var lines = PolygonUtils.split_line_on_height([Vector2(5,5), Vector2(10,10), Vector2(15, 29)], 19.5, true)
+	
+	print(lines)
+	
+	var polygons = [] 
+	
+	for poly in $Poly.get_children():
+		polygons.append(poly.polygon)
+		
+	PolygonUtils.order_clockwise(polygons)
+	
+	for poly in polygons:
+		print(poly)
+		print(PolygonUtils.clockwise_rotation(poly))
+		draw_circle(poly[0],5, Color.BLUE)
+		draw_circle(poly[1], 5, Color.GREEN)
+	return
+	
 	#var radius = 8
 	#var p1 = Vector2(500, 500)
 	#var v1 = Vector2(1,0).normalized() * 100
@@ -952,8 +1083,131 @@ func _draw():
 	#draw_line(qs[2], qs[2] + qs[3]*16, Color.OLIVE, 3)
 	
 	var w1 = Vector2(200, 200)
-	var w2 = Vector2(400, 500)
+	var w2 = Vector2(500, 210)
 	var w3 = Vector2(450, 600)
+	
+	
+	var qq = OrcaUtils.determine_closest_point_on_wall_segment(
+		pos,
+		w1,
+		w2,
+		8,
+		v,
+		1
+	)
+	
+	draw_line(
+		w1,
+		w2,
+		Color.BLACK,
+		3
+	)
+	
+
+	
+	var qq2 = OrcaUtils.determine_closest_point_on_wall_segment(
+		pos,
+		w2,
+		w3,
+		8,
+		v,
+		1
+	)
+	
+	draw_line(
+		w2,
+		w3,
+		Color.BLACK,
+		3
+	)
+	
+
+	
+	draw_circle(
+		pos,
+		8,
+		Color.DARK_MAGENTA
+	)
+	
+	draw_line(
+		pos,
+		pos + v,
+		Color.DARK_RED,
+		3
+	)
+	
+	var hps : Array[OrcaUtils.HalfPlane] = []
+	
+	if qq:
+		var u_n = qq[0]
+		var n_n = qq[1]
+		
+		draw_circle(pos + u_n + v, 8, Color.YELLOW_GREEN)
+		var half_plane = OrcaUtils.HalfPlane.new(
+			v +  u_n,
+			n_n.rotated(-PI/2),
+			n_n
+		)
+		draw_line(pos + u_n + v, pos + u_n + v + 16 * n_n, Color.WHITE, 3)
+		draw_line(pos + qq[2], pos + qq[3], Color.WHITE, 3)
+		
+		hps.append(half_plane)
+	
+	if qq2:
+		var u_n = qq2[0]
+		var n_n = qq2[1]
+		
+		draw_circle(pos + u_n + v, 8, Color.YELLOW_GREEN)
+		var half_plane = OrcaUtils.HalfPlane.new(
+			v +  u_n,
+			n_n.rotated(-PI/2),
+			n_n
+		)
+		draw_line(pos + u_n + v, pos + u_n + v + 16 * n_n, Color.WHITE, 3)
+		draw_line(pos + qq2[2], pos + qq2[3], Color.WHITE, 3)
+		
+		hps.append(half_plane)
+	
+	if not qq and not qq2:
+		var vs = OrcaUtils.determine_closest_edge_point(pos, w2, 8, v, 1, [w1 - pos, w3 - pos])
+		var u_n = vs[0]
+		var n_n = vs[1]
+		
+		var half_plane = OrcaUtils.HalfPlane.new(
+			v +  u_n,
+			n_n.rotated(-PI/2),
+			n_n
+		)
+		draw_line(pos + u_n + v, pos + u_n + v + 16 * n_n, Color.WHITE, 3)
+		#draw_line(pos + qq2[2], pos + qq2[3], Color.WHITE, 3)
+		
+		hps.append(half_plane)
+		
+		if len(vs) == 4:
+			var half_plane2 = OrcaUtils.HalfPlane.new(
+				v +  vs[2],
+				vs[3].rotated(-PI/2),
+				vs[3]
+			)
+			hps.append(half_plane2)
+			
+			draw_line(pos + vs[2] + v, pos + vs[2] + v + 16 * vs[3], Color.WHITE, 3)
+		
+				
+	var velocity = OrcaUtils.randomized_bounded_lp(hps,  v, v, 50)
+	
+	if not velocity:
+		velocity = Vector2(0,0)
+	
+	draw_line(pos, pos + velocity, Color.BLUE, 3)
+	
+	draw_circle(w3, 8, Color.FIREBRICK)
+	#var vs = OrcaUtils.determine_closest_edge_point(pos, w2, 8, v, 1, [w1 - pos, w3 - pos])
+	
+	#draw_circle(pos + vs[0] + v, 8, Color.YELLOW)
+	
+	
+	return
 	
 	var qs = OrcaUtils.determine_closest_point_on_wall_v_object(
 		pos,
@@ -991,7 +1245,7 @@ func _draw():
 	
 	
 	
-	#return
+	return
 	
 	var u2 = qs[2]
 	var n2 = qs[3]
@@ -1122,7 +1376,7 @@ func _draw():
 	#var pos_2 =  Vector2(550, 240) + dir * 100
 	#draw_line(pos_1, pos_2, Color.BLUE, 3)
 		
-	return	
+		
 	#var orientation_2 = half_plane.p_dir.x
 	#var o_dir = org_plane.p_dir
 	var switch = false
@@ -1151,7 +1405,6 @@ func _draw():
 	var cs_ = [c2_, c3_, c4_, c5_, c6_]
 	
 	var hps_ : Array[OrcaUtils.HalfPlane] = []
-	
 	
 	for c in cs_:
 	
@@ -1248,6 +1501,6 @@ func _draw():
 		1,
 		Vector2(38.987, 31.305)
 	)
-	#print(Vector2(483.7, 401.763).distance_to(Vector2(499.079, 406.179)))
+	print(Vector2(483.7, 401.763).distance_to(Vector2(499.079, 406.179)))
 	
 	print(v)

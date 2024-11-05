@@ -1,6 +1,10 @@
+class_name OrcaUtils
+
 extends Node
 
-class_name OrcaUtils
+
+static func generate_normales_of_polyogn():
+	pass
 
 
 static func on_segment(l1 : Vector2, l2 : Vector2, p : Vector2):
@@ -492,8 +496,8 @@ static func evaluate_constraints(
 		#	print(up)
 		#	print("down")
 		#	print(down)
-		if g_c.length() + delta_v < closest_point.length():
-			return null
+		#if g_c.length() + delta_v < closest_point.length():
+		#	return null
 		
 		return closest_point
 	
@@ -514,6 +518,7 @@ static func evaluate_constraints(
 		)
 	
 		if not circle_points:
+			print("null")
 			return null
 	
 		var intersection = circle_points["left"]
@@ -792,7 +797,24 @@ static func set_velocity(agent, others_all, walls_all):
 		var c_p = GeometryUtils.get_closest_point_on_line(w[0], w[1], agent["position"])
 		if c_p.distance_to(agent["position"]) < 200:
 			walls.append(w)
+	
+	var wall_point_to_visited = {}
+	
+	var wall_point_to_edge_dirs = {}
+	
+	for wall in walls:
+		wall_point_to_edge_dirs[wall[0]] = []
+		wall_point_to_edge_dirs[wall[1]] = []
+		if not wall[0] in wall_point_to_visited:
+			wall_point_to_visited[wall[0]] = false
+		if not wall[1] in wall_point_to_visited:
+			wall_point_to_visited[wall[1]] = false
 			
+	for wall in walls:
+		wall_point_to_edge_dirs[wall[0]].append(wall[1] - agent["position"])
+		wall_point_to_edge_dirs[wall[1]].append(wall[0] - agent["position"])
+		
+	#print(wall_point_to_edge_dirs)
 	
 	#if not agent["opt_velocity"]:
 	#	agent["new_velocity"] = Vector2(0,0)
@@ -819,11 +841,19 @@ static func set_velocity(agent, others_all, walls_all):
 		h_ps.append(h_p)
 		
 	
-		
+	
 	for wall in walls:
 		var w1 = wall[0]
 		var w2 = wall[1]
-		var vs = determine_closest_point_on_wall_v_object(
+		#var vs = determine_closest_point_on_wall_v_object(
+		#	agent["position"],
+		#	w1,
+		#	w2,
+		#	8,
+		#	opt_vel,
+		#	1.0
+		#)
+		var vs = determine_closest_point_on_wall_segment(
 			agent["position"],
 			w1,
 			w2,
@@ -831,8 +861,18 @@ static func set_velocity(agent, others_all, walls_all):
 			opt_vel,
 			1.0
 		)
-		var u: Vector2 = vs[2]
-		var n = vs[3]	
+		
+		if not vs:
+			continue
+		
+		var u: Vector2 = vs[0]
+		var n: Vector2 = vs[1]
+		
+		wall_point_to_visited[w1] = true
+		wall_point_to_visited[w2] = true
+		
+		#var u: Vector2 = vs[2]
+		#var n = vs[3]	
 		
 		var h_p = HalfPlane.new(
 			opt_vel + u,
@@ -840,6 +880,40 @@ static func set_velocity(agent, others_all, walls_all):
 			n
 		)
 		h_ps.append(h_p)
+		
+	
+	for point in wall_point_to_visited:
+		#print(wall_point_to_visited)
+		if not wall_point_to_visited[point]: #and point.distance_to(agent["position"]) < 50:
+			var vs = determine_closest_edge_point(
+				agent["position"],
+				point,
+				8,
+				opt_vel,
+				1.0,
+				wall_point_to_edge_dirs[point]
+			)
+			
+			var u = vs[0]
+			var n = vs[1]
+			
+			var h_p = HalfPlane.new(
+				opt_vel + u,
+				n.rotated(-PI/2),
+				n
+			)
+			h_ps.append(h_p)
+			
+			if len(vs) == 4:
+				var u2 = vs[0]
+				var n2 = vs[1]
+				var h_p2 = HalfPlane.new(
+					opt_vel + u,
+					n.rotated(-PI/2),
+					n
+				)
+				h_ps.append(h_p2)
+				
 		
 	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 50)
 	if not new_velocity:
@@ -853,7 +927,7 @@ static func set_opt_velocities(agents: Array, paths: Array):
 		var path = paths[i]
 		if not path:
 			agents[i]["opt_velocity"] = Vector2(0,0)
-			agents[i]["new_velocity"] = Vector2(0,0)
+			#agents[i]["new_velocity"] = Vector2(0,0)
 			continue
 		var dir = agents[i]["position"].direction_to(path[0])
 		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
@@ -891,6 +965,143 @@ static func determine_closest_point_on_wall_v_object(pos: Vector2, w1: Vector2, 
 	var c1 = (w1 - pos) / tau
 	var c2 = (w2 - pos) / tau
 	r = r / tau
+	var ts = determine_tangent_to_circle(c1, r)
+	var ts2 = determine_tangent_to_circle(c2, r)
+	var t1: Vector2 = ts[0]
+	if abs(t1.angle_to(c2)) < abs(ts[1].angle_to(c2)):
+		t1 = ts[1]
+	var t2 : Vector2 = ts2[0]
+	if abs(t2.angle_to(c1)) < abs(ts2[1].angle_to(c1)):
+		t2 = ts2[1]
+	
+	var dir = outside_normal(t1, t2, Vector2(0,0))	
+	
+	var n = null
+	var u = null
+	
+	var n1_n = -outside_normal(c1, c2, Vector2(0,0))
+	var c1_n = c1 + n1_n * r
+	var c2_n = c2 + n1_n * r
+	
+	var us = []
+	var ns = []
+	if on_half_line(t1, 2 * t1, v ):
+		var n1 = outside_normal(Vector2(0, 0), t1, c1)
+		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t1, v)
+		# Edge cases
+		var u3 = t1
+		var u4 = t2
+		ns += [n1]
+		us += [u1]
+	if  on_half_line(t2, 2 * t2, v ):
+		var n2 = outside_normal(Vector2(0, 0), t2, c2)
+		var u2 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t2, v)
+		ns += [n2]
+		us += [u2]
+	if on_segment(c1, c2, v):
+		var u1 = GeometryUtils.get_closest_point_on_line(c1_n, c2_n, v)
+		ns += [n1_n]
+		us += [u1]
+	if not on_segment(c1, c2, v) and not on_segment(t1, 100000 * t1.normalized(), v):
+		var n1 = (v - c1).normalized()
+		var u1 = c1 + n1 * r
+		ns += [n1]
+		us += [u1]
+	if not on_segment(c1, c2, v) and not on_segment(t2, 100000 * t2.normalized(), v):
+		var n1 = (v - c2).normalized()
+		var u1 = c2 + n1 * r
+		ns += [n1]
+		us += [u1]
+
+	ns += [n1_n, n1_n, outside_normal(Vector2(0, 0), t1, c1), outside_normal(Vector2(0, 0), t2, c2)]
+	us += [c1_n, c2_n, t1, t2]
+		
+	var dist = INF
+	for i in range(len(ns)):
+		var u_c = us[i]
+		var dist_c = u_c.distance_to(v)
+		if dist_c < dist:
+			dist = dist_c
+			u = u_c
+			n = ns[i]
+			
+	var n_out = -outside_normal(c1, c2, Vector2(0, 0))
+	
+	return [t1, t2, u - v , n, c1 + n_out * r, c2 + n_out*r]
+	
+static func determine_closest_point_on_wall_segment(pos: Vector2, w1: Vector2, w2: Vector2, r: float, v: Vector2, tau: float):
+	var c1 = (w1 - pos) / tau
+	var c2 = (w2 - pos) / tau
+	r = r/tau
+	
+	var n = -outside_normal(c1, c2, Vector2(0,0))
+	var c1_n = c1 + n * r
+	var c2_n = c2 + n * r
+	var p : Vector2 = GeometryUtils.get_intersection(
+		Vector2(0,0),
+		v,
+		c1,
+		c2-c2
+	)
+	if p.length() < v.length():
+		var u = GeometryUtils.get_closest_point_on_line(c1_n, c2_n, v)
+		return [u-v , n, c1_n, c2_n]
+
+	if (on_segment(c1, c2, Vector2(0,0)) and on_segment(c1, c2, v)) or on_segment(c1, c2, v):
+		var u = GeometryUtils.get_closest_point_on_line(c1_n, c2_n, v)
+		return [u-v , n, c1_n, c2_n]
+	return null
+	
+static func determine_closest_edge_point(
+	pos: Vector2,
+	edge_point: Vector2, 
+	r: float,
+	v: Vector2,
+	tau: float,
+	neighbour_points	
+):
+	var c1 = (edge_point - pos) / tau
+	r = r / tau
+	var n = (v - c1).normalized()
+	var u = c1 + r * n
+	if len(neighbour_points) == 2:
+		print("here")
+		var p1 : Vector2 = neighbour_points[0]
+		var p2 : Vector2 = neighbour_points[1]
+		var n1 = outside_normal(c1, p1 , Vector2(0,0))
+		var n2 = outside_normal(c1, p2 , Vector2(0,0))
+		if (v - c1).dot(n1) < 0 or (v - c1).dot(n2) < 0:
+			print("dropped")
+			return [u - v, n]
+		print("after drop")
+		#var d1 = (p1 - c1).normalized()
+		#var d2 = (p2 - c1).normalized()
+		var u1 = c1 - r * n1
+		var u2 = c1 - r * n2
+		#if u1.distance_to(v) < u2.distance_to(v):
+		#	return [u1 - v, -n1]
+		return [u2- v, -n2, u1 - v, -n1]
+		
+	return [u - v, n]
+	
+	
+static func determine_polygon_visible_tangent_points(pos: Vector2, polygon):
+	#pick random point and find the one with the largest angle to it
+	var point: Vector2 = polygon[0]
+	var max_angle = 0
+	for p in polygon:
+		var angle_1 = pos.angle_to(point)
+		var angle_2 = pos.angle_to(p)
+		
+		
+	pass
+	
+static func determine_closest_point_outside_normal_on_polygon(pos: Vector2, polygon, radius: float, v: Vector2, tau: float):
+	var c1 = Vector2(0,0)
+	var c2 = Vector2(0,0)
+	#var c1 = (w1 - pos) / tau
+	#var c2 = (w2 - pos) / tau
+	var r = radius / tau
 	var ts = determine_tangent_to_circle(c1, r)
 	var ts2 = determine_tangent_to_circle(c2, r)
 	var t1: Vector2 = ts[0]
