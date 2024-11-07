@@ -803,10 +803,30 @@ func _draw():
 		100*Vector2(0.25, 0.25)
 	]
 	
+	var inner_polygon = [
+		100*Vector2(0.25, 0.25),
+		100*Vector2(0.25, 0.75),
+		100*Vector2(0.75, 0.75),
+		100*Vector2(0.75, 0.25)
+	]
 	
-	var used_polygon = polys_9
+	var inner_polygon_2 = [
+		100*Vector2(-0.1, -0.1),
+		100*Vector2(0.0, 0.2),
+		100*Vector2(0.2, 0.2),
+		100*Vector2(0.2, -0.1)
+	]
 	
-	var new_area = PolygonUtils.reshape_area(area, used_polygon, 100 , 100)
+	var inner_polygon_3 = [
+		100*Vector2(0.3, 0.1),
+		100*Vector2(0.3, 0.2),
+		100*Vector2(0.95, 0.2),
+		100*Vector2(0.95, 0.1)
+	]
+	
+	var used_polygon = inner_polygon
+	
+	#var new_area = PolygonUtils.reshape_area(area, used_polygon, 100 , 100)
 	
 	for i in range( area.size()):
 		var next_i = (i+1) % area.size()
@@ -816,6 +836,9 @@ func _draw():
 		var next_i = (i+1) % used_polygon.size()
 		draw_line(used_polygon[i] + Vector2(50,50), used_polygon[next_i] + Vector2(50,50), Color.DARK_GREEN, 3)
 	
+	#var new_area = PolygonUtils.add_poylgon_inside_area(area, used_polygon)
+	
+	var new_area = PolygonUtils.extract_allowed_area([inner_polygon, inner_polygon_2, inner_polygon_3], 100, 100)
 	
 	for i in range( new_area.size()):
 		var next_i = (i+1) % new_area.size()

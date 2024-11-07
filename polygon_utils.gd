@@ -128,15 +128,7 @@ static func get_polygon_path_between_intersections(
 	var path = polygon.slice((start_idx+1) % poly_size, end_idx +1)
 	var start = polygon[(start_idx+1) % poly_size]
 	var end = polygon[end_idx]
-	#if in_polygon(area, start) and in_polygon(area, end):
-		#var s = min(start_idx+1, end_idx)
-		#var e = max(start_idx+1, end_idx)
-	#	return polygon.slice(start_idx + 1, end_idx+ 1)
-	#var s = min(start_idx, (end_idx +1) % poly_size)
-	#var e = max(start_idx, (end_idx +1) % poly_size)
-	
-	#print(start_idx)
-	#print(end_idx  + 1)
+
 	if not in_polygon(area, polygon[start_idx]):
 		start_idx = (start_idx + 1) % poly_size
 	
@@ -148,21 +140,12 @@ static func get_polygon_path_between_intersections(
 	
 	var s = start_idx
 	
-	print("start + end")
-	print(s)
-	print(end_idx)
-	
 	while s != (end_idx + 1) % poly_size:
 		if not in_polygon(area, polygon[s]):
 			found = false
 			break  
 		segment.append(polygon[s])
 		s = (s + 1) % poly_size
-	
-	print("segment 1")
-	print(segment)
-	print(found)
-	print("this was found")
 	
 	if found and segment:
 		return segment
@@ -275,8 +258,46 @@ static func reshape_area(area: Array, polygon: Array, width, height):
 	
 	return new_area		
 		
+static func add_poylgon_inside_area(area: Array, polygon: Array):
+	var lowest_index = 0
+	var minimum = INF
+	
+	for i in polygon.size():
+		var y = polygon[i].y
+		if y < minimum:
+			lowest_index = i
+	
+	var x_min = polygon[lowest_index].x
+	var y_min = polygon[lowest_index].y
+	
+	var found_intersection = Vector2(-INF, -INF)
+	var intersection_idx
+	
+	# all intersections must lie below the lowest point
+	for i in range(area.size()):
+		var p1 = area[i]
+		var p2 = area[(i+1) % area.size()]
+		var left = min(p1.x, p2.x)
+		var right = max(p1.x, p2.x)
+		if not (left <= x_min and x_min <= right):
+			continue
+		var y_intersection = (x_min - p1.x)/ (p2.x - p1.x) * (p2.y - p1.y) + p1.y
+		if y_intersection > y_min:
+			continue
+		if y_intersection > found_intersection.y:
+			found_intersection = Vector2(x_min, y_intersection)
+			intersection_idx = i
+			print("HERE")
 		
-
+	var new_area =  area.slice(0, intersection_idx + 1) 
+	new_area += [found_intersection]
+	new_area += polygon.slice(lowest_index, polygon.size()) + polygon.slice(0, lowest_index + 1)
+	new_area += [found_intersection]
+	new_area += area.slice(intersection_idx + 1, area.size())
+	
+	return new_area 
+	
+		
 static func insert_into_area(polygon, area, width, height):
 	# If a polygon intersects with area of the border, corresponding parts will be used as new outerline
 	# ohterwise two vertical lines from the lowest point of the polygon will be used to exclude the polygon
@@ -284,8 +305,15 @@ static func insert_into_area(polygon, area, width, height):
 	
 	if intersects_area(polygon, width, height):
 		pass
+		
+static func smallest_y(polygon):
+	var smallest = INF
+	for p in polygon:
+		if p.y < smallest:
+			smallest = p.y
+	return smallest
 	
-static func extract_allowed_area(polygons, width, height):
+static func extract_allowed_area(polygons: Array, width, height):
 	
 	var allowed_area = [
 		Vector2(0,0),
@@ -294,8 +322,16 @@ static func extract_allowed_area(polygons, width, height):
 		Vector2(width, 0)
 	]
 	
+	polygons.sort_custom(func(v1, v2): return smallest_y(v1) < smallest_y(v2))
+	print(polygons)
+	
 	for polygon in polygons:
-		var lowest_point = start_from_lowest_point(polygon)
+		if intersects_area(polygon, width, height):
+			allowed_area = reshape_area(allowed_area, polygon, width, height)
+		else:
+			allowed_area = add_poylgon_inside_area(allowed_area, polygon)
+	return allowed_area
+		
 
 static func height_in_between(height, y1, y2):
 	var minimum = min(y1, y2)
