@@ -7,6 +7,42 @@ static func generate_normales_of_polyogn():
 	pass
 
 
+static func get_normal_inside_polygon(polygon : Array, mid_point: Vector2, normal: Vector2):
+	var factor = 1
+	while true:
+		if PolygonUtils.in_polygon(polygon, mid_point + factor*normal):
+			return normal
+		if PolygonUtils.in_polygon(polygon, mid_point - factor*normal):
+			return -normal
+		factor *= 0.5
+
+static func generate_allowed_area_region(convex_polygon: Array):
+	var half_planes = []
+	for i in convex_polygon.size():
+		var p1 : Vector2 = convex_polygon[i]
+		var p2 : Vector2 = convex_polygon[(i+1) % convex_polygon.size()]
+		var dir = (p2-p1)
+		var normal = get_normal_inside_polygon(
+			convex_polygon,
+			(p2 + p1)/2.0,
+			dir.rotated(PI/2)
+		)
+		var half_plane = HalfPlane.new(
+			p1,
+			dir,
+			normal,
+			i
+		)
+		half_planes.append(half_plane)
+	return half_planes
+
+static func generate_allowed_area_regions(convex_polygons: Array):
+	var regions = []
+	for convex_polygon in convex_polygons:
+		var region = generate_allowed_area_region(convex_polygon)
+		regions.append(region)
+	return regions
+
 static func on_segment(l1 : Vector2, l2 : Vector2, p : Vector2):
 	if (l2-l1).dot(p-l1) < 0:
 		return false
@@ -222,11 +258,13 @@ class HalfPlane:
 	var p : Vector2
 	var l_dir : Vector2
 	var p_dir : Vector2
+	var wall_idx : int
 	
-	func _init(p, l_dir, p_dir) -> void:
+	func _init(p, l_dir, p_dir, wall_idx) -> void:
 		self.p = p
 		self.l_dir = l_dir.normalized()
 		self.p_dir = p_dir.normalized()
+		self.wall_idx = wall_idx
 
 static func intersect_halfplanes(halfplanes):
 	var n = len(halfplanes)
@@ -376,7 +414,8 @@ static func test_intersection_with_circle():
 	var half_plane = HalfPlane.new(
 		m1,
 		dir,
-		Vector2(1, -1)
+		Vector2(1, -1),
+		-1
 	)
 	
 	var m2 = Vector2(290, 325)
@@ -657,79 +696,96 @@ static func randomized_bounded_lp(
 	#if v.y > 0:
 	#	v.y = m2
 	#	dir2 = -dir2
-		
+	"""	
 	var plane_m1 = HalfPlane.new(
 		Vector2(-10000, 0),
 		Vector2(0,1),
-		dir1
+		dir1,
+		-1
 	)
 	var plane_m2 = HalfPlane.new(
 		Vector2(0, -10000),
 		Vector2(1,0),
-		dir2
+		dir2,
+		-1
 	)
 	
 	var plane_m3 = HalfPlane.new(
 		Vector2(10000, 0),
 		Vector2(0,1),
-		-dir1
+		-dir1,
+		-1
 	)
 	var plane_m4 = HalfPlane.new(
 		Vector2(0, 10000),
 		Vector2(1,0),
-		-dir2
+		-dir2,
+		-1
 	)
+	"""
 	
 	half_planes.shuffle()
 	var nr_planes = len(half_planes)
-	var ps : Array[HalfPlane] = [plane_m1, plane_m2, plane_m3, plane_m4]
-	half_planes = ps + half_planes
+	#var ps : Array[HalfPlane] = [plane_m1, plane_m2, plane_m3, plane_m4]
+	#half_planes = ps + half_planes
 	
 	
 	#v = v_opt
 	
 	var found_vs = []
 	
+	var wall_idx = -1
+	
 	for i in range(nr_planes):
-		if element_of(half_planes[i+4], v): #and dist_current >= dist_current:
+		if element_of(half_planes[i], v): #and dist_current >= dist_current:
 			continue
-		var h_ps = half_planes.slice(0, i + 4) 
+		#print(half_planes[i+4].p)
+		#print(half_planes[i+4].p_dir)
+		#print("found v")
+		#print(v)
+		var h_ps = half_planes.slice(0, i) 
+		
+		wall_idx = half_planes[i].wall_idx
 		
 		v = evaluate_constraints(
 			h_ps, #+ h_ps_2,
-			half_planes[i+4],
+			half_planes[i],
 			c,
 			delta_v,
-			i + 5 == nr_planes + 4
+			i + 1 == nr_planes 
 		)
 		if v == null:
-			return null
+			return [null, null]
 			
-	return v
+	return [wall_idx, v]
 
 static func test_randomized_bounded_lp():
 	var plane_1 = HalfPlane.new(
 		Vector2(10, 10),
 		Vector2(0,-1),
-		Vector2(-1,0)
+		Vector2(-1,0),
+		-1
 	)
 	
 	var plane_2 = HalfPlane.new(
 		Vector2(10, 0),
 		Vector2(-1,0),
-		Vector2(0,1)
+		Vector2(0,1),
+		-1
 	)
 	
 	var plane_3 = HalfPlane.new(
 		Vector2(0, 10),
 		Vector2(1, 0),
-		Vector2(0, -1)
+		Vector2(0, -1),
+		-1
 	)
 	
 	var plane_4 = HalfPlane.new(
 		Vector2(0, 0),
 		Vector2(0, 1),
-		Vector2(1, 0)
+		Vector2(1, 0),
+		-1
 	)
 	
 	var planes : Array[HalfPlane] = [
@@ -757,13 +813,15 @@ static func test_randomized_bounded_lp_2():
 	var plane_1 = HalfPlane.new(
 		Vector2(0, 25),
 		Vector2(1, -2).normalized(),
-		Vector2(2, 1).normalized()
+		Vector2(2, 1).normalized(),
+		-1
 	)
 	
 	var plane_2 = HalfPlane.new(
 		Vector2(0, 25),
 		Vector2(1,0),
-		Vector2(0,-1)
+		Vector2(0,-1),
+		-1
 	)
 	
 	var planes : Array[HalfPlane] = [plane_1, plane_2]
@@ -779,40 +837,84 @@ static func test_randomized_bounded_lp_2():
 		20
 	)
 	
+static func adjust_region(region, agent_position):
+	var adjusted_regions = []
+	for i in region.size():
+		var hp = region[i]
+		var half_plane = HalfPlane.new(
+			hp.p - agent_position,
+			hp.l_dir,
+			hp.p_dir,
+			hp.wall_idx
+		)
+		adjusted_regions.append(half_plane)
+	return adjusted_regions
 	
-static func set_velocity(agent, others_all, walls_all):
+static func set_velocity(
+	agent,
+	others_all,
+	convex_polygons,
+	polygon_regions,
+	polygon_to_neighbours,
+	pos_to_region
+):
 	var others = []
 	
 	var w11 = Vector2(200, 200)
 	var w21 = Vector2(400, 500)
 	var w31 = Vector2(450, 600)
 	
-	var walls = walls_all # [[w11, w21], [w21, w31]]
+	var region = null
+	var region_idx = null
+	
+	var visited_regions = []
+	
+	#var pos = GeometryUtils.get_closest_mesh_position(agent["position"], 2)
+	
+	#region = pos_to_region[pos]
+	
+
+	for i in convex_polygons.size():
+		if PolygonUtils.in_polygon(convex_polygons[i], agent["position"]):
+			region = adjust_region(polygon_regions[i], agent["position"])
+			visited_regions.append(convex_polygons[i])
+			region_idx = i
+			break
+	if not region_idx:
+		for i in convex_polygons.size():
+			if PolygonUtils.in_polygon(convex_polygons[i], agent["position"] + agent["opt_velocity"]):
+				region = adjust_region(polygon_regions[i], agent["position"])
+				visited_regions.append(convex_polygons[i])
+				region_idx = i
+				break
+	
+	
+	#var walls = walls_all # [[w11, w21], [w21, w31]]
 	
 	for o in others_all:
 		if o["position"].distance_to(agent["position"]) < 200:
 			others.append(o)
-	for w in walls_all:
-		continue
-		var c_p = GeometryUtils.get_closest_point_on_line(w[0], w[1], agent["position"])
-		if c_p.distance_to(agent["position"]) < 200:
-			walls.append(w)
+	#for w in walls_all:
+	#	continue
+	#	var c_p = GeometryUtils.get_closest_point_on_line(w[0], w[1], agent["position"])
+	#	if c_p.distance_to(agent["position"]) < 200:
+	#		walls.append(w)
 	
-	var wall_point_to_visited = {}
+	#var wall_point_to_visited = {}
 	
-	var wall_point_to_edge_dirs = {}
+	#var wall_point_to_edge_dirs = {}
 	
-	for wall in walls:
-		wall_point_to_edge_dirs[wall[0]] = []
-		wall_point_to_edge_dirs[wall[1]] = []
-		if not wall[0] in wall_point_to_visited:
-			wall_point_to_visited[wall[0]] = false
-		if not wall[1] in wall_point_to_visited:
-			wall_point_to_visited[wall[1]] = false
+	#for wall in walls:
+	#	wall_point_to_edge_dirs[wall[0]] = []
+	#	wall_point_to_edge_dirs[wall[1]] = []
+	#	if not wall[0] in wall_point_to_visited:
+	#		wall_point_to_visited[wall[0]] = false
+	#	if not wall[1] in wall_point_to_visited:
+	#		wall_point_to_visited[wall[1]] = false
 			
-	for wall in walls:
-		wall_point_to_edge_dirs[wall[0]].append(wall[1] - agent["position"])
-		wall_point_to_edge_dirs[wall[1]].append(wall[0] - agent["position"])
+	#for wall in walls:
+	#	wall_point_to_edge_dirs[wall[0]].append(wall[1] - agent["position"])
+	#	wall_point_to_edge_dirs[wall[1]].append(wall[0] - agent["position"])
 		
 	#print(wall_point_to_edge_dirs)
 	
@@ -836,16 +938,88 @@ static func set_velocity(agent, others_all, walls_all):
 		var h_p = HalfPlane.new(
 			opt_vel + factor * u,
 			n.rotated(-PI/2),
-			n
+			n,
+			-1
 		)
 		h_ps.append(h_p)
 		
+	var one_jump = false 
+		
+	while true:
+		var half_planes : Array[HalfPlane] = []
+		half_planes.append_array(h_ps)
+		half_planes.append_array(region)
+		var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 50)
+		var wall_idx = xs[0]
+		
+		var new_velocity : Vector2 = xs[1]
+		if new_velocity == null:
+			new_velocity = Vector2(0,0)
+			#agent["opt_velocity"] = new_velocity#Vector2(0,0)
+			agent["new_velocity"] = new_velocity
+			return
+		
+		var min_dist = new_velocity.distance_to(agent["opt_velocity"])
+		
+		
+		for w_index in polygon_to_neighbours[region_idx]:
+			var r_idx = polygon_to_neighbours[region_idx][w_index]
+			print("RIDX")
+			print(r_idx)
+			if r_idx == null:
+				continue
+			region = adjust_region(polygon_regions[r_idx], agent["position"])
+			var planes : Array[HalfPlane] = []
+			planes.append_array(h_ps)
+			planes.append_array(region)
+			var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 50)
+			var velocity = vs[1]
+			if velocity == null:
+				continue
+			var dist = velocity.distance_to(agent["opt_velocity"])
+			print("dist")
+			print(dist)
+			print("min_dist")
+			print(min_dist)
+			if dist < min_dist:
+				print("found_new_velocity")
+				new_velocity = velocity
+				min_dist = dist
+		agent["new_velocity"] = new_velocity
+		
+		return	
+			
+		"""
+		
+		print("This is the wall idx")
+		print(wall_idx)
+		var new_velocity = xs[1]
+		if new_velocity == null:
+			new_velocity = Vector2(0,0)
+			#agent["opt_velocity"] = new_velocity#Vector2(0,0)
+			agent["new_velocity"] = new_velocity
+			return
+		if wall_idx != null and wall_idx != -1 and region_idx != null:
+			print("region idx before")
+			print(region_idx)
+			region_idx = polygon_to_neighbours[region_idx][wall_idx]
+			print("new region_idx")
+			#one_jump = true
+			print(region_idx)
+		if wall_idx == -1 or region_idx == null or region_idx == -1 or one_jump:
+			print("return")
+			#agent["opt_velocity"] = new_velocity
+			agent["new_velocity"] = new_velocity
+			return
+		region = adjust_region(polygon_regions[region_idx], agent["position"])
+		#one_jump = true
+		"""
 	
 	
-	for wall in walls:
-		var w1 = wall[0]
-		var w2 = wall[1]
-		#var vs = determine_closest_point_on_wall_v_object(
+	#for wall in walls:
+	#	var w1 = wall[0]
+	#	var w2 = wall[1]
+	#	#var vs = determine_closest_point_on_wall_v_object(
 		#	agent["position"],
 		#	w1,
 		#	w2,
@@ -853,66 +1027,69 @@ static func set_velocity(agent, others_all, walls_all):
 		#	opt_vel,
 		#	1.0
 		#)
-		var vs = determine_closest_point_on_wall_segment(
-			agent["position"],
-			w1,
-			w2,
-			8,
-			opt_vel,
-			1.0
-		)
+	#	var vs = determine_closest_point_on_wall_segment(
+	#		agent["position"],
+	#		w1,
+	#		w2,
+	#		8,
+	#		opt_vel,
+	#		1.0
+	#	)
 		
-		if not vs:
-			continue
+	#	if not vs:
+	#		continue
 		
-		var u: Vector2 = vs[0]
-		var n: Vector2 = vs[1]
-		
-		wall_point_to_visited[w1] = true
-		wall_point_to_visited[w2] = true
+	#	var u: Vector2 = vs[0]
+	#	var n: Vector2 = vs[1]
+	#	
+	#	wall_point_to_visited[w1] = true
+	#	wall_point_to_visited[w2] = true
 		
 		#var u: Vector2 = vs[2]
 		#var n = vs[3]	
 		
-		var h_p = HalfPlane.new(
-			opt_vel + u,
-			n.rotated(-PI/2),
-			n
-		)
-		h_ps.append(h_p)
+	#	var h_p = HalfPlane.new(
+	#		opt_vel + u,
+	#		n.rotated(-PI/2),
+	#		n,
+	#		-1
+	#	)
+	#	h_ps.append(h_p)
 		
 	
-	for point in wall_point_to_visited:
-		#print(wall_point_to_visited)
-		if not wall_point_to_visited[point]: #and point.distance_to(agent["position"]) < 50:
-			var vs = determine_closest_edge_point(
-				agent["position"],
-				point,
-				8,
-				opt_vel,
-				1.0,
-				wall_point_to_edge_dirs[point]
-			)
+	#for point in wall_point_to_visited:
+	#	#print(wall_point_to_visited)
+	#	if not wall_point_to_visited[point]: #and point.distance_to(agent["position"]) < 50:
+	#		var vs = determine_closest_edge_point(
+	#			agent["position"],
+	#			point,
+	#			8,
+	#			opt_vel,
+	#			1.0,
+	#			wall_point_to_edge_dirs[point]
+	#		)
 			
-			var u = vs[0]
-			var n = vs[1]
+	#		var u = vs[0]
+	#		var n = vs[1]
 			
-			var h_p = HalfPlane.new(
-				opt_vel + u,
-				n.rotated(-PI/2),
-				n
-			)
-			h_ps.append(h_p)
+	#		var h_p = HalfPlane.new(
+	#			opt_vel + u,
+	#			n.rotated(-PI/2),
+	#			n,
+	#			-1
+	#		)
+	#		h_ps.append(h_p)
 			
-			if len(vs) == 4:
-				var u2 = vs[0]
-				var n2 = vs[1]
-				var h_p2 = HalfPlane.new(
-					opt_vel + u,
-					n.rotated(-PI/2),
-					n
-				)
-				h_ps.append(h_p2)
+	#		if len(vs) == 4:
+	#			var u2 = vs[0]
+	#			var n2 = vs[1]
+	#			var h_p2 = HalfPlane.new(
+	#				opt_vel + u,
+	#				n.rotated(-PI/2),
+	#				n,
+	#				-1
+	#			)
+	#			h_ps.append(h_p2)
 				
 		
 	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 50)
@@ -933,19 +1110,40 @@ static func set_opt_velocities(agents: Array, paths: Array):
 		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
 		
 	
-static func set_velocities(agents : Array, paths: Array, walls: Array):
+static func set_velocities(
+	agents : Array,
+	paths: Array,
+	convex_polygons,
+	polygon_regions,
+	polygon_to_neighbours,
+	pos_to_region
+):
 	set_opt_velocities(agents, paths)
 	var nr_agents = len(agents)
 	for i in range(nr_agents):
 			var agent = agents[i]
 			var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
-			set_velocity(agent, others, walls)
+			set_velocity(
+				agent,
+				others,
+				convex_polygons,
+				polygon_regions,
+				polygon_to_neighbours,
+				pos_to_region
+			)
 	for i in range(nr_agents):
 		if not agents[i]["new_velocity"]:
 			continue
 		var agent = agents[i]
 		var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
-		set_velocity(agent, others, walls)
+		set_velocity(
+			agent,
+			others,
+			convex_polygons,
+			polygon_regions,
+			polygon_to_neighbours,
+			pos_to_region
+		)
 		
 static func determine_tangent_to_circle(c, r: float):
 	var devisor = c.x**2 + c.y**2
@@ -1065,15 +1263,12 @@ static func determine_closest_edge_point(
 	var n = (v - c1).normalized()
 	var u = c1 + r * n
 	if len(neighbour_points) == 2:
-		print("here")
 		var p1 : Vector2 = neighbour_points[0]
 		var p2 : Vector2 = neighbour_points[1]
 		var n1 = outside_normal(c1, p1 , Vector2(0,0))
 		var n2 = outside_normal(c1, p2 , Vector2(0,0))
 		if (v - c1).dot(n1) < 0 or (v - c1).dot(n2) < 0:
-			print("dropped")
 			return [u - v, n]
-		print("after drop")
 		#var d1 = (p1 - c1).normalized()
 		#var d2 = (p2 - c1).normalized()
 		var u1 = c1 - r * n1
@@ -1193,12 +1388,14 @@ static func find_opt_v(H,c):
 	var m1 = HalfPlane.new(
 		v,
 		Vector2(0,1),
-		dir_1
+		dir_1,
+		-1
 	)
 	var m2 = HalfPlane.new(
 		v,
 		Vector2(1,0),
-		dir_2
+		dir_2,
+		-1
 	)
 	
 	var hps : Array = [m1, m2] + H
@@ -1261,25 +1458,29 @@ static func test_find_opt_v():
 	var plane_1 = HalfPlane.new(
 		Vector2(10, 10),
 		Vector2(0,-1),
-		Vector2(-1,0)
+		Vector2(-1,0),
+		-1
 	)
 	
 	var plane_2 = HalfPlane.new(
 		Vector2(10, 0),
 		Vector2(-1,0),
-		Vector2(0,1)
+		Vector2(0,1),
+		-1
 	)
 	
 	var plane_3 = HalfPlane.new(
 		Vector2(0, 10),
 		Vector2(1, 0),
-		Vector2(0, -1)
+		Vector2(0, -1),
+		-1
 	)
 	
 	var plane_4 = HalfPlane.new(
 		Vector2(0, 0),
 		Vector2(0, 1),
-		Vector2(1, 0)
+		Vector2(1, 0),
+		-1
 	)
 	var H = [
 		plane_1,

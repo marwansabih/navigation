@@ -14,11 +14,43 @@ static func order_clockwise(polygons):
 	var clockwise_polygons = []
 	
 	for polygon in polygons:
-		if not clockwise_rotation(polygon):
+		if clockwise_rotation(polygon):
 			polygon.reverse()
 		clockwise_polygons.append(polygon)
 	
 	return clockwise_polygons	
+	
+static func find_polygon_idx_by_wall(polygons: Array, p1: Vector2, p2: Vector2, current_idx: int):
+	for i in polygons.size():
+		if i == current_idx:
+			continue
+		var polygon = polygons[i]
+		for j in polygon.size():
+			var p1_ = polygon[j]
+			var p2_ = polygon[(j+1) % polygon.size()]
+			if p1_ == p1 and p2_ == p2:
+				return i
+			if p1_ == p2 and p2_ == p1:
+				return i
+	return null
+
+static func generate_polygon_neighbour_dict(polygons: Array):
+	var polygon_idx_to_wall_idx_to_polygon_idx = {}
+	for i in polygons.size():
+		var polygon = polygons[i]
+		polygon_idx_to_wall_idx_to_polygon_idx[i] = {}
+		for j in polygon.size():
+			var p1 = polygon[j]
+			var p2 = polygon[(j+1) %  polygon.size()]
+			var found_idx = find_polygon_idx_by_wall(
+				polygons,
+				p1,
+				p2,
+				i
+			)
+			polygon_idx_to_wall_idx_to_polygon_idx[i][j] = found_idx
+	return polygon_idx_to_wall_idx_to_polygon_idx
+			
 	
 static func start_from_lowest_point(polygon: Array):
 	var lowest_point_index = 0
@@ -76,6 +108,8 @@ static func in_polygon(
 		var angle = (polygon[i] - point).angle_to(polygon[(i+1) % polygon.size()] - point)
 		angle_sum += angle
 		if abs(abs(angle) -PI) < 0.001:
+			return true
+		if polygon[i].distance_to(point) < 0.0001:
 			return true
 	if abs(angle_sum) > 0.1:
 		return true
@@ -196,6 +230,7 @@ static func reshape_area(area: Array, polygon: Array, width, height):
 			var dir_wall = (wall[1] - wall[0]).normalized()
 			var dir_p_wall = (p_wall[1] - p_wall[0]).normalized()
 			
+			
 			var intersection = GeometryUtils.get_intersection(
 				wall[0],
 				dir_wall,
@@ -266,6 +301,7 @@ static func add_poylgon_inside_area(area: Array, polygon: Array):
 		var y = polygon[i].y
 		if y < minimum:
 			lowest_index = i
+			minimum = y
 	
 	var x_min = polygon[lowest_index].x
 	var y_min = polygon[lowest_index].y
@@ -291,7 +327,9 @@ static func add_poylgon_inside_area(area: Array, polygon: Array):
 		
 	var new_area =  area.slice(0, intersection_idx + 1) 
 	new_area += [found_intersection]
-	new_area += polygon.slice(lowest_index, polygon.size()) + polygon.slice(0, lowest_index + 1)
+	var inner_segment = polygon.slice(lowest_index, polygon.size()) + polygon.slice(0, lowest_index +1)
+	inner_segment.reverse()
+	new_area += inner_segment
 	new_area += [found_intersection]
 	new_area += area.slice(intersection_idx + 1, area.size())
 	
@@ -323,15 +361,120 @@ static func extract_allowed_area(polygons: Array, width, height):
 	]
 	
 	polygons.sort_custom(func(v1, v2): return smallest_y(v1) < smallest_y(v2))
-	print(polygons)
 	
 	for polygon in polygons:
 		if intersects_area(polygon, width, height):
 			allowed_area = reshape_area(allowed_area, polygon, width, height)
-		else:
+	for polygon in polygons:
+		if not intersects_area(polygon, width, height):
 			allowed_area = add_poylgon_inside_area(allowed_area, polygon)
 	return allowed_area
+	
+static func empty_triangle(triangle: Array, polygon: Array):
+	for point in polygon:
+		if point in triangle:
+			continue
+		if in_polygon(triangle, point):
+			return false
+	return true
+	
+static func triangulate_polygon(polygon: Array):
+	var found_triangles = []
+	var idx = 0
+	while len(polygon) > 2:
+		var size = polygon.size()
+		var triangle = [polygon[idx % size], polygon[(idx + 1) % size], polygon[(idx + 2) % size]]
+		if not clockwise_rotation(triangle) and empty_triangle(triangle, polygon):
+			found_triangles.append(triangle)
+			polygon.pop_at((idx + 1) % size)
+			continue
 		
+		idx += 1
+	
+	return found_triangles
+
+static func is_convex_polygon(polygon: Array):
+	for i in polygon.size():
+		var size = polygon.size()
+		var p1 = polygon[i]
+		var p2 = polygon[(i+1) % size]
+		var p3 = polygon[(i+2) % size]
+		if clockwise_rotation([p1, p2, p3]):
+			return false
+	return true
+
+static func add_triangle_to_poylgon(polygon: Array, triangle: Array):
+	var new_polygon = polygon.duplicate()
+	var size = polygon.size()
+	for i in range(size):
+		if new_polygon[i] in triangle and new_polygon[(i+1) % size] in triangle:
+			if not triangle[0] in new_polygon:
+				new_polygon.insert((i+1) % size, triangle[0])
+				break
+			if not triangle[1] in new_polygon:
+				new_polygon.insert((i+1) % size, triangle[1])
+				break
+			if not triangle[2] in new_polygon:
+				new_polygon.insert((i+1) % size, triangle[2])
+				break
+	return new_polygon
+
+static func  allowed_area_splitted_convex(
+		polyogons : Array,
+		width,
+		height
+	):
+		polyogons = order_clockwise(polyogons)
+		var allowed_area = extract_allowed_area(
+			polyogons,
+			width,
+			height
+		)
+		#return [allowed_area]
+		
+		var triangles = triangulate_polygon(allowed_area)
+		
+		
+		var convex_polygons = []
+		
+		var recent_polygon = triangles.pop_front()
+		var latest_triangle = recent_polygon
+		
+		while triangles:
+			for i in triangles.size():
+				var nr_common_points = 0
+				var triangle = triangles[i] 
+				if triangle[0] in latest_triangle:
+					nr_common_points += 1
+				if triangle[1] in latest_triangle:
+					nr_common_points += 1
+				if triangle[2] in latest_triangle:
+					nr_common_points += 1
+				if nr_common_points == 2:
+					triangles.pop_at(i)
+					var polygon_candidate = add_triangle_to_poylgon(
+						recent_polygon,
+						triangle
+					)
+					if is_convex_polygon(polygon_candidate):
+						recent_polygon = polygon_candidate
+						latest_triangle = triangle
+					else:
+						convex_polygons.append(recent_polygon)
+						recent_polygon = triangle
+						latest_triangle = triangle
+					break
+			convex_polygons.append(recent_polygon)
+			recent_polygon = triangles.pop_front()
+			latest_triangle = recent_polygon
+		
+		if not recent_polygon in convex_polygons:
+			convex_polygons.append(recent_polygon)			
+		
+		return convex_polygons
+					
+					
+			 
 
 static func height_in_between(height, y1, y2):
 	var minimum = min(y1, y2)

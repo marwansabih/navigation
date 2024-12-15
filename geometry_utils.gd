@@ -1,5 +1,5 @@
-class_name GeometryUtils
 extends Node
+class_name GeometryUtils
 
 static func polar_angle(v: Vector2):
 	var angle = v.angle()

@@ -21,7 +21,7 @@ polygon = PackedVector2Array(329, 104, 499, 157, 768, 0, 432, 1)
 
 [node name="Polygon2D4" type="Polygon2D" parent="Poly"]
 color = Color(1, 1, 1, 0.513726)
-polygon = PackedVector2Array(263, 447, 419, 363, 576, 430, 858, 441, 912, 371, 1063, 214, 990, 156, 995, 38, 904, 18, 971, 4, 1148, 170, 1104, 465, 311, 465)
+polygon = PackedVector2Array(263, 447, 419, 363, 576, 430, 858, 441, 912, 371, 1063, 214, 990, 156, 995, 38, 904, 18, 977, -2, 1190, 1, 1173, 166, 1171, 252, 1168, 466, 311, 465)
 
 [node name="Polygon2D2" type="Polygon2D" parent="Poly"]
 color = Color(1, 1, 1, 0.517647)

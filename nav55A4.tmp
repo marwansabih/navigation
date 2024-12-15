@@ -1,0 +1,28 @@
+[gd_scene load_steps=3 format=3 uid="uid://b3ocrqkrgj0rt"]
+
+[ext_resource type="Script" path="res://navigation_isometrie.gd" id="1_vv1va"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_8onms"]
+source_geometry_group_name = &"navigation_polygon_source_group"
+
+[node name="NavTest" type="Node2D"]
+script = ExtResource("1_vv1va")
+
+[node name="Poly" type="NavigationRegion2D" parent="."]
+navigation_polygon = SubResource("NavigationPolygon_8onms")
+
+[node name="Polygon2D" type="Polygon2D" parent="Poly"]
+color = Color(1, 1, 1, 0.466667)
+polygon = PackedVector2Array(763, 180, 608, 300, 699, 372, 822, 337, 896, 339, 983, 234, 920, 189, 949, 94, 884, 92, 813, 116, 753, 65, 705, 105)
+
+[node name="Polygon2D3" type="Polygon2D" parent="Poly"]
+color = Color(1, 1, 1, 0.427451)
+polygon = PackedVector2Array(329, 104, 499, 157, 768, 0, 432, 1)
+
+[node name="Polygon2D4" type="Polygon2D" parent="Poly"]
+color = Color(1, 1, 1, 0.513726)
+polygon = PackedVector2Array(263, 447, 419, 363, 576, 430, 858, 441, 912, 371, 1063, 214, 990, 156, 995, 38, 904, 18, 973, 13, 1037, 25, 1173, 166, 1171, 252, 1104, 465, 311, 465)
+
+[node name="Polygon2D2" type="Polygon2D" parent="Poly"]
+color = Color(1, 1, 1, 0.517647)
+polygon = PackedVector2Array(-1, 252, 264, 155, 413, 227, 0, 440)

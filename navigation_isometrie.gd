@@ -1,9 +1,12 @@
 extends Node2D
 
+#TODO Fix polygon bug
+#TODO Fix bug in large polygon generation (point to check if it's inside lies outside area)
+
 var point
 
-var dim_x = 800
-var dim_y = 800
+var dim_x = 801
+var dim_y = 801
 
 var base_mesh = []
 var occupancy_mesh = []
@@ -18,8 +21,18 @@ var walls = []
 
 var small_polygons = []
 
-var mesh_grid_size = 16
+var mesh_grid_size = 1
 
+var pos_to_region = {}
+
+func setup_pos_to_region():	
+	for i in convex_polygons.size():
+		var convex_polygon = convex_polygons[i] 
+		for k in range(dim_x):
+			for l in range(dim_y):
+				var point = Vector2(mesh_grid_size*k, mesh_grid_size*l)
+				if PolygonUtils.in_polygon(convex_polygon, point):
+					pos_to_region[point] = polygon_regions[i]
 
 func setup_small_polygons():
 	for p in $Poly.get_children():
@@ -234,23 +247,64 @@ var large_polygons = []
 
 func setup_large_polygons():
 	for p in $Poly.get_children():
-		var poly = generate_polygon_edges(p, 12)
+		var poly = generate_polygon_edges(p, 8)
 		large_polygons.append(poly)
-		#large_polygons.append(p.polygon)
+		var poly_2 = generate_polygon_edges(p, 19)
+		occupied_polygons.append(poly)
+		
+	occupied_polygons = PolygonUtils.order_clockwise(occupied_polygons)
+	large_polygons = PolygonUtils.order_clockwise(large_polygons)
 	
+
 
 func generate_edges():
 	var edges = []
 	for polygon in $Poly.get_children():
-		edges.append_array(generate_polygon_edges(polygon, 16))
+		edges.append_array(generate_polygon_edges(polygon, 19))
 	return edges
 		
+func in_polygons(edge):
+	for poly in convex_polygons:
+		if PolygonUtils.in_polygon(poly, edge):
+			return true
+	return false
+		
+func get_mirrowed_edges(polygon: Array, edge: Vector2):
+	var mirrowed_edges = []
+	for i in polygon.size():
+		var p1 = polygon[i]
+		var p2 = polygon[(i+1) % polygon.size()]
+		var closest_point = GeometryUtils.get_closest_point_on_line(
+			p1,
+			p2,
+			edge
+		)
+		if not edge.distance_to(closest_point) < 50:
+			continue
+		var mirrowed_edge = 2 * closest_point - edge
+		if in_polygons(mirrowed_edge):
+			mirrowed_edges.append(mirrowed_edge)
+	return mirrowed_edges
 	
+		
+func multiply_edges(edges):
+	var new_edges = []
+	for edge in edges:
+		for i in convex_polygons.size():
+			var c_p = convex_polygons[i]
+			if PolygonUtils.in_polygon(c_p, edge):
+				new_edges.append(edge)
+				var m_edges = get_mirrowed_edges(c_p, edge)
+				new_edges.append_array(m_edges)
+	return new_edges
 			
 		
 func intersect_with_occupied_polygons(p,q):
 	for polygon in occupied_polygons:
-		if GeometryUtils.interset_with_shape(polygon, p,q):
+		var dir = (q-p).normalized().rotated(PI/2)
+		var critera_1 = GeometryUtils.interset_with_shape(polygon, p + 8 * dir,q + 8 * dir )
+		var critera_2 = GeometryUtils.interset_with_shape(polygon, p - 8 * dir,q - 8 * dir )
+		if GeometryUtils.interset_with_shape(polygon, p,q) and critera_1 and critera_2:
 			return true
 	return false
 
@@ -259,7 +313,7 @@ var graph
 
 
 var position_to_units = {}
-var position_to_visible_edges = {}
+var mesh_data : MeshData #position_to_visible_edges = {}
 var actor_position_mesh = {}
 var polygon_position_mesh = {}
 
@@ -381,26 +435,45 @@ func generate_shadow_polygons(point):
 
 func add_visible_edges(point):
 	var visible_edges = []
-	position_to_visible_edges[point] = []
+	mesh_data.position_to_visible_edges[point] = []
 	
 	for i in len(edges):
 		if not intersect_with_occupied_polygons(point, edges[i]):
-			position_to_visible_edges[point].append(i)
+			mesh_data.position_to_visible_edges[point].append(i)
 
 func generate_position_to_visible_edges_2():
+	
+	var position_to_visible_edges = {}
+	
 	var shadow_polygons = []
 	for edge in edges:
+		print(edge)
 		var polys = generate_shadow_polygons(edge)
 		shadow_polygons.append(polys)
 		
 	for i in range(dim_x):
+		print(i)
 		for j in range(dim_y):
 			var visible_edges = []
 			var pos = Vector2(i*mesh_grid_size, j*mesh_grid_size)
 			for k in range(len(edges)):
-				if not inside_polygons(pos, shadow_polygons[k]):
+				if inside_polygons(pos, shadow_polygons[k]):
+					continue
+				var c_edge = edges[k]
+				var d = (c_edge - pos).normalized().rotated(PI/2)
+				
+				var criterea_1 = intersect_with_occupied_polygons(pos + d * 9, c_edge + d*9)
+				var criterea_2 = intersect_with_occupied_polygons(pos - d * 9, c_edge - d*9)
+				var criterea_3 = intersect_with_occupied_polygons(pos, c_edge)
+				if not criterea_1 and not criterea_2 and not criterea_3:
 					visible_edges.append(k)
+				
 			position_to_visible_edges[pos] = visible_edges
+	
+	mesh_data.position_to_visible_edges = position_to_visible_edges
+			
+	ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	
 	return 
 	for key in position_to_visible_edges.keys():
 		if not position_to_visible_edges[key]:
@@ -411,7 +484,7 @@ func generate_position_to_visible_edges_2():
 			for dir in [up, down, right, left]:
 				if dir in position_to_visible_edges:
 					position_to_visible_edges[key] = position_to_visible_edges[dir] #[GeometryUtils.get_closest_edge(edges, key)]
-			
+	
 func generate_position_to_visible_edges():
 	for i in range(dim_x):
 		for j in range(dim_y):
@@ -438,14 +511,27 @@ func shortest_path_between_positions(
 	p1: Vector2,
 	p2: Vector2
 ):
-	if not intersect_with_occupied_polygons(p1, p2):
+	print("shortest path")
+	var dir = p2 - p1
+	
+	var d = dir.rotated(PI/2).normalized()
+	
+	var criterea_1 = intersect_with_occupied_polygons(p1 + d * 12, p2 + d*9)
+	var criterea_2 = intersect_with_occupied_polygons(p1 - d * 12, p2 - d*9)
+	var criterea_3 = intersect_with_occupied_polygons(p1, p2)
+	
+	if not criterea_1 and not criterea_2 and not criterea_3:
+		print("in critera")
 		return [p1,p2]
+	#if not intersect_with_occupied_polygons(p1, p2):
+	#	return [p1,p2]
+	
 	
 	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
 	var p2_m = GeometryUtils.get_closest_mesh_position(p2, mesh_grid_size)
 	
-	var neigh_1 = position_to_visible_edges[p1_m]
-	var neigh_2 = position_to_visible_edges[p2_m]
+	var neigh_1 = mesh_data.position_to_visible_edges[p1_m]
+	var neigh_2 = mesh_data.position_to_visible_edges[p2_m]
 	var min_dist = INF
 	var edge_1
 	var edge_2
@@ -454,6 +540,16 @@ func shortest_path_between_positions(
 		for j in neigh_2:
 			var dist_2 = GeometryUtils.isometric_distance(p2_m, edges[j])
 			var dist = dist_1 + edges_to_dist[i][j] + dist_2
+			
+			#d = (edges[i] - p1).rotated(PI/2).normalized()
+			
+			#criterea_1 = intersect_with_occupied_polygons(p1 + d * 8, edges[i] + d*8)
+			#criterea_2 = intersect_with_occupied_polygons(p1 - d * 8, edges[i] - d*8)
+			#criterea_3 = intersect_with_occupied_polygons(p1, edges[i])
+			
+			#if criterea_1 or criterea_2 or criterea_3:
+			#	continue
+			
 			if dist < min_dist:
 				edge_1 = i
 				edge_2 = j
@@ -481,14 +577,15 @@ var fake_character = {
 var fake_chars = []
 
 func generate_fake_chars():
-	return
-	for i in range(8):
+	#return
+	for i in range(1):
 		var char = {
 			"velocity" =50,
 			"position" = Vector2(16 + 36*i,100),
 			"dir" = null,
 			"org_dir" = Vector2(0,0),
-			"local_path" = null
+			"local_path" = null,
+			"destination" = null
 		}
 		fake_chars.append(char)
 		continue
@@ -497,7 +594,8 @@ func generate_fake_chars():
 			"position" = Vector2(16 + 36*i,50),
 			"dir" = null,
 			"org_dir" = Vector2(0,0),
-			"local_path" = null
+			"local_path" = null,
+			"destination" = null
 		}
 		fake_chars.append(char2)
 	
@@ -511,7 +609,6 @@ func inisde_polygon(pos):
 	return false
 
 func generate_fake_characters():
-	return
 	for poly in $Poly.get_children():
 		for ele in poly.polygon:
 			fake_characters.append(ele)
@@ -548,19 +645,22 @@ func move_along_direction(
 	var dir = character["dir"]
 	var velocity = character["velocity"]
 	var pos = character["position"]
-	if pos.direction_to(path[0]).dot(character["org_dir"]) < 0:
+	#if pos.direction_to(path[0]).dot(character["org_dir"]) < 0:
+	#	path.pop_front()
+	#	if path:
+	#		character["dir"] = pos.direction_to(path[0])
+	#		character["org_dir"] = pos.direction_to(path[0])
+	if path and path[0].distance_to(pos) < 4:
 		path.pop_front()
+		if not path:
+			character["destination"] = null
 		if path:
 			character["dir"] = pos.direction_to(path[0])
 			character["org_dir"] = pos.direction_to(path[0])
-	if path and path[0].distance_to(pos) < 10:
-		path.pop_front()
-		if path:
-			character["dir"] = pos.direction_to(path[0])
-			character["org_dir"] = pos.direction_to(path[0])
-	if len(path) > 1 and not intersect_with_occupied_polygons(pos, path[1]):
-		if (path[1]-path[0]).dot(pos-path[0]) > 0:
-			pass
+			character["opt_velocity"] = velocity * character["org_dir"]
+	#if len(path) > 1 and not intersect_with_occupied_polygons(pos, path[1]):
+	#	if (path[1]-path[0]).dot(pos-path[0]) > 0:
+	#		pass
 			#path.pop_front()
 	if path:
 		"""
@@ -577,7 +677,7 @@ func move_along_direction(
 			if char == character:
 				continue
 			var next_pos =  character["position"] + character["new_velocity"] * delta
-			if char["position"].distance_to(next_pos) <  16:
+			if char["position"].distance_to(next_pos) <  1:
 				print ("warning warning warning")
 				print(char["position"])
 				print(character["position"])
@@ -586,7 +686,7 @@ func move_along_direction(
 				print(char["opt_velocity"])
 				print(character["opt_velocity"])
 				print ("warning warning warning")
-				factor = 0
+				factor = 1
 				
 		character["position"] += character["new_velocity"] * delta * factor#velocity * character["dir"] * delta
 		cycle += 1
@@ -598,9 +698,13 @@ var edges_to_path = {}
 func generate_dists(graph):
 	var size = len(edges)
 	for i in range(size):
+		print(i)
 		edges_to_dist[i] = {}
 		edges_to_path[i] = {}
 		for j in range(size):
+			print(j)
+			print(graph[i])
+			print(graph[j])
 			var node = Dijstra.find_shortest_path(graph, graph[i], graph[j])
 			edges_to_dist[i][j] = node["distance"]
 			edges_to_path[i][j] = node["path"]
@@ -621,13 +725,65 @@ func generate_connections():
 var shortest_paths = []
 	
 # Called when the node enters the scene tree for the first time.
+
+var convex_polygons = []
+var polygon_neighbours_dict
+var polygon_regions = []
+
 func _ready():
-	return
+	
+	var t = {
+		"list": ["hey", "HO", "ho"]
+	}
+	
+	var new_data = MeshData.new()
+	
+	new_data.position_to_visible_edges = {
+		2 : 3,
+		3 : 4,
+		5 : 6
+	}
+	
+	#ResourceSaver.save(new_data, "res://test.tres")
+	
+	#var mesh = ResourceLoader.load("res://test.tres")
+	
+	#print(mesh.position_to_visible_edges)
+	
+	#FileUtils.save_json(t, "test.json")
+	
+	#var test =  FileUtils.load_json("test.json")
+	#print(test)
+	#{
+	#	2: "hello",
+	#	3: "mu"
+	#}
+	#FileUtils.save_json(test, "test.json")
+	
+	
+	
 	setup_small_polygons()
+	setup_large_polygons()
+	var rect = $Poly.get_viewport().get_visible_rect().size
+	convex_polygons = PolygonUtils.allowed_area_splitted_convex(
+		large_polygons,
+		rect[0],
+		rect[1]
+	)
+	
+	mesh_data = MeshData.new()
+	
+	polygon_neighbours_dict = PolygonUtils.generate_polygon_neighbour_dict(convex_polygons)
+	polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
+	
+	#return
+	print("First setup done")
+	
 	setup_pos_to_wall()
 	generate_fake_chars()
 	setup_polygon_position_mesh()
 	setup_large_polygons()
+	setup_pos_to_region()
 	occupied_polygons = large_polygons
 	#for polygon in $Poly.get_children():
 		#occupied_polygons = large_polygons
@@ -641,6 +797,8 @@ func _ready():
 		var poly = p.polygon
 		ps.append(poly)
 	
+	#es = multiply_edges(es)
+	
 	for e in es:
 		if e.x > 0 and e.y > 0:
 			if not inside_polygons(e, ps):
@@ -651,34 +809,66 @@ func _ready():
 	
 		
 	graph = Dijstra.generate_graph(edges, connections)
+	print("graph done")
 	generate_dists(graph)
-	generate_position_to_visible_edges_2()
+	print("graph generated")
+	if ResourceLoader.exists("res://mesh_data.tres"):
+		mesh_data = ResourceLoader.load("res://mesh_data.tres")
+		print(mesh_data.position_to_visible_edges)
+	
+	var p_to_e = mesh_data.position_to_visible_edges
+		
+	if not mesh_data.position_to_visible_edges:
+		generate_position_to_visible_edges_2()
+	print("position to visible edges done")
 	shortest_path = shortest_path_between_positions(
 		fake_character["position"],
 		Vector2(800, 400)
 	)
 	for fake_char in fake_chars:
+		fake_char["destination"] = Vector2(800, 400)
 		var short_path = shortest_path_between_positions(
 			fake_char["position"],
 			Vector2(800, 400)
 		)
 		shortest_paths.append(short_path)
 	
+	print("setup finished")
 	
-	OrcaUtils.set_velocities(fake_chars, shortest_paths, walls)
+	OrcaUtils.set_velocities(
+		fake_chars,
+		shortest_paths,
+		convex_polygons,
+		polygon_regions,
+		polygon_neighbours_dict,
+		pos_to_region
+	)
 	
+	print("setup finished")
 	#generate_fake_characters()
 	#setup_actor_position_mesh()
 	#put_characters_to_mesh()
 	
+func set_shortest_path():
+	for i in len(shortest_paths):
+		if not fake_chars[i]["destination"]:
+			continue
+			
+		var short_path = shortest_path_between_positions(
+			fake_chars[i]["position"],
+			fake_chars[i]["destination"]
+		)
+		shortest_paths[i] = short_path
+	
 func _input(event):
 	if event is InputEventMouseButton:
 		print("Mouse Click/Unclick at: ", event.position)
-		shortest_path = shortest_path_between_positions(
-			fake_character["position"],
-			event.position
-		)
+		#shortest_path = shortest_path_between_positions(
+		#	fake_character["position"],
+		#	event.position
+		#)
 		for i in len(shortest_paths):
+			fake_chars[i]["destination"] = event.position
 			var short_path = shortest_path_between_positions(
 				fake_chars[i]["position"],
 				event.position
@@ -695,14 +885,23 @@ func _input(event):
 func _physics_process(delta):
 	#OrcaUtils.test_randomized_bounded_lp_2()
 	queue_redraw()
-	return
+	
+	set_shortest_path()
 	
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
 		var s_p = shortest_paths[i]
+		print(s_p)
 		move_along_direction(f_c, s_p, delta)
 	
-	OrcaUtils.set_velocities(fake_chars, shortest_paths, walls)
+	OrcaUtils.set_velocities(
+		fake_chars,
+		shortest_paths,
+		convex_polygons,
+		polygon_regions,
+		polygon_neighbours_dict,
+		pos_to_region
+	)
 	
 	#move_along_direction(
 	#	fake_character,
@@ -719,6 +918,85 @@ var c1_ = Vector2(768.4091, 379.506)
 var opt_v = Vector2(80,0)
 	
 func _draw():
+	var out = Vector2(293.8073, 471.2429)
+	var vel = Vector2(34.87661, -35.82767)
+	
+	draw_circle(out, 4, Color.RED)
+	draw_line(out, out + vel, Color.GREEN, 3)
+
+	
+	for h in convex_polygons.size():
+		var poly = convex_polygons[h]
+		var region = polygon_regions[h]
+		for i in poly.size():
+			var p1 = poly[i]
+			var p2 = poly[(i+1) % poly.size()]
+			var mid_point = (p1 + p2)/2
+			var n = region[i].p_dir
+			var color = Color.BLACK
+			var size = 3
+			# problematic 12
+			if h == 17:
+				var p =  polygon_neighbours_dict[h][i]
+				color = Color.WHITE
+				if p != null:
+					print("P")
+					print(p)
+					color = Color.RED
+				size = 5
+			if h == 0:
+				color = Color.AQUAMARINE
+				size = 5
+			draw_line(p1, p2, color, size)
+			draw_line(
+				mid_point, mid_point + 16 * n, Color.BLUE, 3
+			)
+	var poly = convex_polygons[12]
+	var region = polygon_regions[12]
+	
+	for i in poly.size():
+			var p1 = poly[i]
+			var p2 = poly[(i+1) % poly.size()]
+			var mid_point = (p1 + p2)/2
+			var n = region[i].p_dir
+			draw_line(p1, p2, Color.RED, 3)
+			draw_line(
+				mid_point, mid_point + 16 * n, Color.RED, 3
+			)
+			
+	for j in fake_chars.size():
+		var pth = shortest_paths[j]
+		var pos = fake_chars[j]["position"]
+		if not pth:
+			continue
+		draw_line(pos, pth[0], Color.NAVY_BLUE, 3) 
+		for i in pth.size() - 1:
+			draw_line(pth[i], pth[i+1], Color.NAVY_BLUE, 3)
+	
+	for edge_point in edges:
+		draw_circle(edge_point, 3, Color.AZURE)
+	
+	"""
+	
+	var rect = $Poly.get_viewport().get_visible_rect().size
+	
+	print(rect)
+	
+	print("large polygons")
+	print(large_polygons)
+	
+	for polygon in large_polygons:
+		for i in range( polygon.size()):
+			var next_i = (i+1) % polygon.size()
+			draw_line(polygon[i], polygon[next_i], Color.DARK_GREEN, 3)
+	
+	for convex_p in convex_polygons:
+		if not convex_p:
+			continue
+		for i in range( convex_p.size()):
+			var next_i = (i+1) % convex_p.size()
+			draw_line(convex_p[i], convex_p[next_i], Color.BLACK, 10)
+	
 	
 	var area = [
 		100*Vector2(0,0),
@@ -811,10 +1089,10 @@ func _draw():
 	]
 	
 	var inner_polygon_2 = [
-		100*Vector2(-0.1, -0.1),
-		100*Vector2(0.0, 0.2),
+		100*Vector2(0.1, 0.1),
+		100*Vector2(0.1, 0.2),
 		100*Vector2(0.2, 0.2),
-		100*Vector2(0.2, -0.1)
+		100*Vector2(0.2, 0.1)
 	]
 	
 	var inner_polygon_3 = [
@@ -824,7 +1102,14 @@ func _draw():
 		100*Vector2(0.95, 0.1)
 	]
 	
-	var used_polygon = inner_polygon
+	var polygon_test = [
+		100 * Vector2(0.8, 0.8),
+		100 * Vector2(0.8, 1.8),
+		100 * Vector2(1.8, 1.8),
+		100 * Vector2(1.8, 0.8)
+	]
+	
+	var used_polygon = polys_6 #inner_polygon
 	
 	#var new_area = PolygonUtils.reshape_area(area, used_polygon, 100 , 100)
 	
@@ -838,12 +1123,52 @@ func _draw():
 	
 	#var new_area = PolygonUtils.add_poylgon_inside_area(area, used_polygon)
 	
-	var new_area = PolygonUtils.extract_allowed_area([inner_polygon, inner_polygon_2, inner_polygon_3], 100, 100)
+	#var new_area = PolygonUtils.extract_allowed_area([inner_polygon, inner_polygon_2, inner_polygon_3], 100, 100)
+	#var new_area = PolygonUtils.extract_allowed_area([inner_polygon, inner_polygon_2, inner_polygon_3, polygon_test], 100, 100)
+	var new_area = PolygonUtils.extract_allowed_area([inner_polygon], 100, 100)
 	
-	for i in range( new_area.size()):
-		var next_i = (i+1) % new_area.size()
-		draw_line(new_area[i] + Vector2(50,50), new_area[next_i] + Vector2(50,50), Color.BLUE, 3)
+	#new_area = area
 	
+	#var triangles = PolygonUtils.triangulate_polygon(new_area)
+	
+	#var convex_polygons = PolygonUtils.allowed_area_splitted_convex(
+	#	[inner_polygon, inner_polygon_2, inner_polygon_3, polygon_test],
+	#	100,
+	#	100
+	#)
+	
+	var convex_polygons = PolygonUtils.allowed_area_splitted_convex(
+		[inner_polygon],
+		100,
+		100
+	)
+
+	#print("triangles")
+	#print(triangles)
+	#for i in range( new_area.size()):
+	#	var next_i = (i+1) % new_area.size()
+	#	draw_line(new_area[i] + Vector2(50,50), new_area[next_i] + Vector2(50,50), Color.BLUE, 3)
+		
+	#for triangle in triangles:
+	#	for i in range( triangle.size()):
+	#		var next_i = (i+1) % triangle.size()
+	#		draw_line(triangle[i] + Vector2(50,50), triangle[next_i] + Vector2(50,50), Color.GREEN, 3)
+	
+	for triangle in convex_polygons:
+		for i in range( triangle.size()):
+			var next_i = (i+1) % triangle.size()
+			draw_line(triangle[i] + Vector2(50,50), triangle[next_i] + Vector2(50,50), Color.BLACK, 3)
+	
+	#var new = PolygonUtils.extract_allowed_area([polys], 100, 100)
+	
+	#print("Area")
+	#print(PolygonUtils.is_convex_polygon(new))
+	
+	var triangle = [Vector2(100,100), Vector2(100,0), Vector2(150,0)]
+	var po = PolygonUtils.add_triangle_to_poylgon(area, triangle)
+	#for i in range( po.size()):
+	#		var next_i = (i+1) % po.size()
+	#		draw_line(po[i] + Vector2(50,50), po[next_i] + Vector2(50,50), Color.BLACK, 3)
 	return
 	
 	var triangle_clockwise = [Vector2(0,0), Vector2(50,50), Vector2(100,0)]
@@ -864,9 +1189,15 @@ func _draw():
 	for poly in polygons:
 		print(poly)
 		print(PolygonUtils.clockwise_rotation(poly))
-		draw_circle(poly[0],5, Color.BLUE)
+		draw_circle(poly[0], 5, Color.BLUE)
 		draw_circle(poly[1], 5, Color.GREEN)
+	
+	
+	
+	
 	return
+	
+
 	
 	#var radius = 8
 	#var p1 = Vector2(500, 500)
@@ -983,6 +1314,10 @@ func _draw():
 		
 	#draw_circle(fake_character["position"], 8, color)
 	
+	"""
+	
+	print(fake_chars)
+	
 	for fake_char in fake_chars:
 		draw_circle(fake_char["position"], 8, Color.NAVY_BLUE)
 		draw_line(fake_char["position"], fake_char["position"] + fake_char["new_velocity"], Color.RED, 3 )
@@ -992,11 +1327,13 @@ func _draw():
 		for i in range(len(path) -1):
 			draw_line(path[i], path[i+1], Color.BLACK, 1)
 	
+	
+	"""
 	for polygon in occupied_polygons:
 		for point in polygon:
 			draw_circle(point, 2, Color.NAVY_BLUE)
 	
-	"""
+
 	var obs_ps = [
 		#Vector2(50, 50),
 		#Vector2(75, 75),
@@ -1088,6 +1425,8 @@ func _draw():
 			draw_circle(Vector2(i*8, j*8), 1, Color.BLACK)
 	"""
 	
+	"""
+	
 	var c1 = Vector2(500, 500)
 	var c2 = Vector2(550, 600)
 	var radius = 25
@@ -1169,7 +1508,8 @@ func _draw():
 		var half_plane = OrcaUtils.HalfPlane.new(
 			v +  u_n,
 			n_n.rotated(-PI/2),
-			n_n
+			n_n,
+			-1
 		)
 		draw_line(pos + u_n + v, pos + u_n + v + 16 * n_n, Color.WHITE, 3)
 		draw_line(pos + qq[2], pos + qq[3], Color.WHITE, 3)
@@ -1184,7 +1524,8 @@ func _draw():
 		var half_plane = OrcaUtils.HalfPlane.new(
 			v +  u_n,
 			n_n.rotated(-PI/2),
-			n_n
+			n_n,
+			-1
 		)
 		draw_line(pos + u_n + v, pos + u_n + v + 16 * n_n, Color.WHITE, 3)
 		draw_line(pos + qq2[2], pos + qq2[3], Color.WHITE, 3)
@@ -1199,7 +1540,8 @@ func _draw():
 		var half_plane = OrcaUtils.HalfPlane.new(
 			v +  u_n,
 			n_n.rotated(-PI/2),
-			n_n
+			n_n,
+			-1
 		)
 		draw_line(pos + u_n + v, pos + u_n + v + 16 * n_n, Color.WHITE, 3)
 		#draw_line(pos + qq2[2], pos + qq2[3], Color.WHITE, 3)
@@ -1210,7 +1552,8 @@ func _draw():
 			var half_plane2 = OrcaUtils.HalfPlane.new(
 				v +  vs[2],
 				vs[3].rotated(-PI/2),
-				vs[3]
+				vs[3],
+				-1
 			)
 			hps.append(half_plane2)
 			
@@ -1232,6 +1575,7 @@ func _draw():
 	
 	return
 	
+	
 	var qs = OrcaUtils.determine_closest_point_on_wall_v_object(
 		pos,
 		w1,
@@ -1249,6 +1593,7 @@ func _draw():
 		v,
 		1
 	)
+	
 	
 	#draw_circle(pos, 8, Color.WHITE)
 	
@@ -1270,8 +1615,10 @@ func _draw():
 	
 	return
 	
+	
 	var u2 = qs[2]
 	var n2 = qs[3]
+	
 	
 	draw_line(pos , pos + v, Color.AQUA)
 	draw_line(pos + v, pos + v + u2, Color.RED)
@@ -1290,7 +1637,8 @@ func _draw():
 	var half_plane = OrcaUtils.HalfPlane.new(
 		v +  u2,
 		n2.rotated(-PI/2),
-		n2
+		n2,
+		-1
 	)
 	
 	
@@ -1301,7 +1649,8 @@ func _draw():
 	var half_plane_2 = OrcaUtils.HalfPlane.new(
 		v +  u2,
 		n2.rotated(-PI/2),
-		n2
+		n2,
+		-1
 	)
 	
 	draw_line(pos , pos + v, Color.AQUA)
@@ -1352,7 +1701,8 @@ func _draw():
 	var hp = OrcaUtils.HalfPlane.new(
 		Vector2(550, 240),
 		dir.rotated(PI/2),
-		dir	
+		dir,
+		-1
 	)
 	
 
@@ -1367,7 +1717,8 @@ func _draw():
 		var hp2 = OrcaUtils.HalfPlane.new(
 			Vector2(550, 240),
 			dir_2.rotated(PI/2),
-			dir_2	
+			dir_2,
+			-1	
 		)
 		
 		#var o_2 = dir_2.x
@@ -1466,7 +1817,8 @@ func _draw():
 		var hp_ = OrcaUtils.HalfPlane.new(
 			opt_v + ts[2],
 			ts[3].rotated(PI/2),
-			ts[3]
+			ts[3],
+			-1
 		)
 		
 		hps_.append(hp_)
@@ -1507,14 +1859,14 @@ func _draw():
 		"opt_velocity":Vector2(11.27111, 48.71306)
 	}
 	
-	"""
+
 	var paths = agent_1["position]
 	
 	OrcaUtils.set_velocities(
 		[agent_1, agent_2],
 		[]
 	)
-	"""
+	
 	
 	var v = OrcaUtils.closest_point_on_vo_boundary_2(
 		Vector2(483.7, 401.763),
@@ -1527,3 +1879,4 @@ func _draw():
 	print(Vector2(483.7, 401.763).distance_to(Vector2(499.079, 406.179)))
 	
 	print(v)
+	"""
