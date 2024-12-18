@@ -173,24 +173,46 @@ static func closest_point_on_vo_boundary_2(
 ):
 	var m1 = (p2 - p1)/float(tau)
 	var r1 = float(rA + rB) / tau
+
+	var ts = determine_tangent_to_circle(m1, r1)
 	
- 
+	var t1 = ts[0]
+	var t2 = ts[1]
+		
 	
 	#if m1.length() < r1:
 	#	r1 = m1.length()
 	#	var n = (opt_v - m1).normalized()
 	#	return [Vector2(1,0), Vector2(1,0), m1 + n * r1 - opt_v, n]
 	
-	var ts = determine_tangent_to_circle(m1, r1)
+	if m1.length() <= r1 + 0.01:
+		var l = m1.length()
+		var n = -m1.normalized()
+		var u : Vector2 = GeometryUtils.get_closest_point_on_line(
+			Vector2(0,0),
+			n.rotated(PI/2),
+			opt_v
+		)
+		return [ts[0], ts[1], u - opt_v, n] 
+		
+	
+
 	
 	# if agents are touching each other tangent will become zero
-	if not ts[0]:
+	if (t1.x == 0.0 and t1.y == 0.0) or not t1 or is_nan(t1.x) or is_nan(t1.y):
 		var n = -m1.normalized()
-		var u = m1 + r1 * n
-		return [ts[0], ts[1], u, n] 
+		var u : Vector2 = GeometryUtils.get_closest_point_on_line(
+			Vector2(0,0), n.rotated(PI/2), opt_v
+		)
+		return [ts[0], ts[1], u - opt_v, n] 
 	
-	var t1 = ts[0]
-	var t2 = ts[1]
+	if (t2.x == 0.0 and t2.y == 0.0) or not t2 or is_nan(t2.x) or is_nan(t2.y):
+		var n = -m1.normalized()
+		var u : Vector2 = GeometryUtils.get_closest_point_on_line(
+			Vector2(0,0), n.rotated(PI/2), opt_v
+		)
+		return [ts[0], ts[1], u - opt_v, n] 
+	
 	
 	#if m1.length() <= r1:
 	#	return [t1, t2 ,-m1, -m1.normalized()]
@@ -251,6 +273,8 @@ static func closest_point_on_vo_boundary_2(
 		print(t2)
 		print(us)
 		print(ns)
+		#u = Vector2(0, 0)
+		#n = Vector2(1,0)
 	
 	return [t1, t2, u - opt_v, n]
 
@@ -894,32 +918,7 @@ static func set_velocity(
 	for o in others_all:
 		if o["position"].distance_to(agent["position"]) < 200:
 			others.append(o)
-	#for w in walls_all:
-	#	continue
-	#	var c_p = GeometryUtils.get_closest_point_on_line(w[0], w[1], agent["position"])
-	#	if c_p.distance_to(agent["position"]) < 200:
-	#		walls.append(w)
-	
-	#var wall_point_to_visited = {}
-	
-	#var wall_point_to_edge_dirs = {}
-	
-	#for wall in walls:
-	#	wall_point_to_edge_dirs[wall[0]] = []
-	#	wall_point_to_edge_dirs[wall[1]] = []
-	#	if not wall[0] in wall_point_to_visited:
-	#		wall_point_to_visited[wall[0]] = false
-	#	if not wall[1] in wall_point_to_visited:
-	#		wall_point_to_visited[wall[1]] = false
 			
-	#for wall in walls:
-	#	wall_point_to_edge_dirs[wall[0]].append(wall[1] - agent["position"])
-	#	wall_point_to_edge_dirs[wall[1]].append(wall[0] - agent["position"])
-		
-	#print(wall_point_to_edge_dirs)
-	
-	#if not agent["opt_velocity"]:
-	#	agent["new_velocity"] = Vector2(0,0)
 	var opt_vel = agent["opt_velocity"]
 	var h_ps : Array[HalfPlane] = []
 	for other in others:
@@ -931,12 +930,12 @@ static func set_velocity(
 		var vs = closest_point_on_vo_boundary_2( p1, p2, 8, 8, 1, opt_vel - opt_other )
 		var u: Vector2 = vs[2]
 		var n = vs[3]
-		var factor = 1 #1/2
-		if opt_other == Vector2(0,0):
-			factor = 1.0		
+		#var factor = 1 #1/2
+		#if opt_other == Vector2(0,0):
+		#	factor = 1.0		
 		
 		var h_p = HalfPlane.new(
-			opt_vel + factor * u,
+			opt_vel + u,
 			n.rotated(-PI/2),
 			n,
 			-1
@@ -944,52 +943,49 @@ static func set_velocity(
 		h_ps.append(h_p)
 		
 	var one_jump = false 
+	
+	
+	var half_planes : Array[HalfPlane] = []
+	
+	half_planes.append_array(h_ps)
+	half_planes.append_array(region)
+	
+	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 50)
+	
+	var new_velocity = xs[1]
+	
+	if not new_velocity:
+		new_velocity = Vector2(0,0)
+	agent["new_velocity"] = new_velocity
 		
-	while true:
-		var half_planes : Array[HalfPlane] = []
-		half_planes.append_array(h_ps)
-		half_planes.append_array(region)
-		var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 50)
-		var wall_idx = xs[0]
+	var min_dist = new_velocity.distance_to(agent["opt_velocity"])
 		
-		var new_velocity : Vector2 = xs[1]
-		if new_velocity == null:
-			new_velocity = Vector2(0,0)
-			#agent["opt_velocity"] = new_velocity#Vector2(0,0)
-			agent["new_velocity"] = new_velocity
-			return
-		
-		var min_dist = new_velocity.distance_to(agent["opt_velocity"])
-		
-		
-		for w_index in polygon_to_neighbours[region_idx]:
-			var r_idx = polygon_to_neighbours[region_idx][w_index]
-			print("RIDX")
-			print(r_idx)
-			if r_idx == null:
-				continue
-			region = adjust_region(polygon_regions[r_idx], agent["position"])
-			var planes : Array[HalfPlane] = []
-			planes.append_array(h_ps)
-			planes.append_array(region)
-			var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 50)
-			var velocity = vs[1]
-			if velocity == null:
-				continue
-			var dist = velocity.distance_to(agent["opt_velocity"])
-			print("dist")
-			print(dist)
-			print("min_dist")
-			print(min_dist)
-			if dist < min_dist:
-				print("found_new_velocity")
-				new_velocity = velocity
-				min_dist = dist
+	for w_index in polygon_to_neighbours[region_idx]:
+		var r_idx = polygon_to_neighbours[region_idx][w_index]
+		if r_idx == null:
+			continue
+		var new_region = adjust_region(polygon_regions[r_idx], agent["position"])
+		var planes : Array[HalfPlane] = []
+		planes.append_array(h_ps)
+		planes.append_array(new_region)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 50)
+		var velocity = vs[1]
+		if velocity == null:
+			continue
+		var dist = velocity.distance_to(agent["opt_velocity"])
+		print("dist")
+		print(dist)
+		print("min_dist")
+		#print(min_dist)
+		if dist < min_dist:
+			print("found_new_velocity")
+			new_velocity = velocity
+			min_dist = dist
 		agent["new_velocity"] = new_velocity
 		
-		return	
+	return	
 			
-		"""
+	"""
 		
 		print("This is the wall idx")
 		print(wall_idx)
@@ -1013,7 +1009,7 @@ static func set_velocity(
 			return
 		region = adjust_region(polygon_regions[region_idx], agent["position"])
 		#one_jump = true
-		"""
+	"""
 	
 	
 	#for wall in walls:
@@ -1092,11 +1088,11 @@ static func set_velocity(
 	#			h_ps.append(h_p2)
 				
 		
-	var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 50)
-	if not new_velocity:
-		new_velocity = Vector2(0,0)
-		agent["opt_velocity"] = new_velocity#Vector2(0,0)
-	agent["new_velocity"] = new_velocity
+	#var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 50)
+	#if not new_velocity:
+	#	new_velocity = Vector2(0,0)
+	#	agent["opt_velocity"] = new_velocity#Vector2(0,0)
+	#agent["new_velocity"] = new_velocity
 	
 static func set_opt_velocities(agents: Array, paths: Array):
 	var nr_agent = len(agents)
@@ -1108,6 +1104,10 @@ static func set_opt_velocities(agents: Array, paths: Array):
 			continue
 		var dir = agents[i]["position"].direction_to(path[0])
 		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
+		#var dist = agents[i]["position"].distance_to(path[0])
+		#if dist < agents[i]["velocity"] and dist > 5:
+		#	agents[i]["opt_velocity"] = (path[0] - agents[i]["position"])
+			
 		
 	
 static func set_velocities(
@@ -1134,6 +1134,9 @@ static func set_velocities(
 	for i in range(nr_agents):
 		if not agents[i]["new_velocity"]:
 			continue
+		if agents[i]["new_velocity"] == Vector2(0,0):
+			continue
+		
 		var agent = agents[i]
 		var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
 		set_velocity(
