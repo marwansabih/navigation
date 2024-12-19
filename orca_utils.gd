@@ -880,7 +880,9 @@ static func set_velocity(
 	convex_polygons,
 	polygon_regions,
 	polygon_to_neighbours,
-	pos_to_region
+	polygon_to_corners,
+	pos_to_region,
+	path
 ):
 	var others = []
 	
@@ -905,18 +907,29 @@ static func set_velocity(
 			region_idx = i
 			break
 	if not region_idx:
-		for i in convex_polygons.size():
-			if PolygonUtils.in_polygon(convex_polygons[i], agent["position"] + agent["opt_velocity"]):
-				region = adjust_region(polygon_regions[i], agent["position"])
-				visited_regions.append(convex_polygons[i])
-				region_idx = i
-				break
+		region_idx = agent["last_region_idx"]
+		region = adjust_region(polygon_regions[region_idx], agent["position"])
+		visited_regions.append(convex_polygons[region_idx])
+		#for i in convex_polygons.size():
+		#	if PolygonUtils.in_polygon(convex_polygons[i], agent["position"] + agent["opt_velocity"]):
+		#		region = adjust_region(polygon_regions[i], agent["position"])
+		#		visited_regions.append(convex_polygons[i])
+		#		region_idx = i
+		#		break
 	
+	var target_region_idx = -1
+	
+	for i in convex_polygons.size():
+		if not path:
+			continue
+		if PolygonUtils.in_polygon(convex_polygons[i], path[0]):
+			target_region_idx = i
+			break
 	
 	#var walls = walls_all # [[w11, w21], [w21, w31]]
 	
 	for o in others_all:
-		if o["position"].distance_to(agent["position"]) < 200:
+		if o["position"].distance_to(agent["position"]) < 25:
 			others.append(o)
 			
 	var opt_vel = agent["opt_velocity"]
@@ -927,6 +940,10 @@ static func set_velocity(
 			opt_other = other["new_velocity"]
 		var p1 = agent["position"]
 		var p2 = other["position"]
+		#if "new_velocity" in agent:
+		#	opt_vel = agent["new_velocity"]
+		#opt_other = Vector2(0,0)
+		#opt_other = other["opt_velocity"]
 		var vs = closest_point_on_vo_boundary_2( p1, p2, 8, 8, 1, opt_vel - opt_other )
 		var u: Vector2 = vs[2]
 		var n = vs[3]
@@ -950,25 +967,35 @@ static func set_velocity(
 	half_planes.append_array(h_ps)
 	half_planes.append_array(region)
 	
-	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 50)
+	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 100)
 	
 	var new_velocity = xs[1]
 	
 	if not new_velocity:
 		new_velocity = Vector2(0,0)
 	agent["new_velocity"] = new_velocity
+	
 		
 	var min_dist = new_velocity.distance_to(agent["opt_velocity"])
-		
-	for w_index in polygon_to_neighbours[region_idx]:
-		var r_idx = polygon_to_neighbours[region_idx][w_index]
+	# Force traveling to next region if current region doesn't hold the next path stop
+	if path and not region_idx == target_region_idx and min_dist > 3:
+		min_dist = INF
+	
+	var corner_neighbours = PolygonUtils.pos_to_corner_neighbours(
+		agent["position"],
+		region_idx,
+		convex_polygons,
+		polygon_to_corners
+	)
+	
+	for r_idx in corner_neighbours:
 		if r_idx == null:
 			continue
 		var new_region = adjust_region(polygon_regions[r_idx], agent["position"])
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
 		planes.append_array(new_region)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 50)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
 		var velocity = vs[1]
 		if velocity == null:
 			continue
@@ -982,7 +1009,35 @@ static func set_velocity(
 			new_velocity = velocity
 			min_dist = dist
 		agent["new_velocity"] = new_velocity
-		
+	
+	var found_region_idx = region_idx
+	
+	for w_index in polygon_to_neighbours[region_idx]:
+		var r_idx = polygon_to_neighbours[region_idx][w_index]
+		if r_idx == null:
+			continue
+		var new_region = adjust_region(polygon_regions[r_idx], agent["position"])
+		var planes : Array[HalfPlane] = []
+		planes.append_array(h_ps)
+		planes.append_array(new_region)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var velocity = vs[1]
+		if velocity == null:
+			continue
+		var dist = velocity.distance_to(agent["opt_velocity"])
+		print("dist")
+		print(dist)
+		print("min_dist")
+		#print(min_dist)
+		if dist < min_dist:
+			print("found_new_velocity")
+			new_velocity = velocity
+			min_dist = dist
+			found_region_idx = r_idx
+		agent["new_velocity"] = new_velocity
+	
+	agent["last_region_idx"] = found_region_idx 
+	
 	return	
 			
 	"""
@@ -1110,43 +1165,64 @@ static func set_opt_velocities(agents: Array, paths: Array):
 			
 		
 	
+static func get_other_agents(
+	agents,
+	indices
+):
+	var others = []
+	for i in indices:
+		others.append(agents[i])
+	return others
+	
 static func set_velocities(
 	agents : Array,
 	paths: Array,
 	convex_polygons,
 	polygon_regions,
 	polygon_to_neighbours,
+	polygon_to_corners,
 	pos_to_region
 ):
 	set_opt_velocities(agents, paths)
 	var nr_agents = len(agents)
-	for i in range(nr_agents):
-			var agent = agents[i]
-			var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
+	var resting_agents = []
+	var new_resting_agent = true
+	
+	
+	while new_resting_agent:
+		new_resting_agent = false
+		
+		var agent_idx = []
+		
+		for i in range(nr_agents):
+			agent_idx.append(i)
+		agent_idx.shuffle()
+		
+		for i in range(nr_agents):
+			if i in resting_agents:
+				continue
+			var agent = agents[agent_idx[i]]
+			#var others = agent.slice(0, i) + agents.slice(i+1, nr_agents)
+			var others_indices = agent_idx.slice(0, i) + agent_idx.slice(i+1, nr_agents)
+			
+			var others = get_other_agents(
+				agents,
+				others_indices
+			)
+			
 			set_velocity(
 				agent,
 				others,
 				convex_polygons,
 				polygon_regions,
 				polygon_to_neighbours,
-				pos_to_region
+				polygon_to_corners,
+				pos_to_region,
+				paths[i]
 			)
-	for i in range(nr_agents):
-		if not agents[i]["new_velocity"]:
-			continue
-		if agents[i]["new_velocity"] == Vector2(0,0):
-			continue
-		
-		var agent = agents[i]
-		var others = agents.slice(0, i) + agents.slice(i+1, nr_agents)
-		set_velocity(
-			agent,
-			others,
-			convex_polygons,
-			polygon_regions,
-			polygon_to_neighbours,
-			pos_to_region
-		)
+			if not agent["new_velocity"]:
+				resting_agents.append(i)
+				new_resting_agent = true
 		
 static func determine_tangent_to_circle(c, r: float):
 	var devisor = c.x**2 + c.y**2

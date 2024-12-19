@@ -50,7 +50,57 @@ static func generate_polygon_neighbour_dict(polygons: Array):
 			)
 			polygon_idx_to_wall_idx_to_polygon_idx[i][j] = found_idx
 	return polygon_idx_to_wall_idx_to_polygon_idx
-			
+	
+static func find_polygons_by_corner(
+	polygons: Array,
+	corner: Vector2,
+	current_index
+):
+	var found_polys = []
+	for i in polygons.size():
+		if i == current_index:
+			continue
+		if corner in polygons[i]:
+			found_polys.append(i)
+	return found_polys
+		
+	
+static func generate_polygon_corner_neighbour_dict(polygons: Array):
+	var polygon_idx_to_corner_to_polygons = {}
+	for i in polygons.size():
+		var polygon = polygons[i]
+		polygon_idx_to_corner_to_polygons[i] = {}
+		for j in polygon.size():
+			if j == i:
+				continue
+			var p = polygon[j]
+			if p in polygons[j]:
+				polygon
+			var found_polys = find_polygons_by_corner(
+				polygons,
+				p,
+				i
+			)
+			polygon_idx_to_corner_to_polygons[i][j] = found_polys
+	return polygon_idx_to_corner_to_polygons
+	
+static func pos_to_corner_neighbours(
+		pos :Vector2,
+		polygon_idx,
+		polygons,
+		polygon_idx_to_corner_to_polygons
+	):
+	# This function has the purpose to let agent not only
+	# travel over borders to other regions, but also over corners
+	# if close enough
+	var polygon = polygons[polygon_idx]
+	for i in polygon.size():
+		var corner = polygon[i]
+		if corner.distance_to(pos) < 5:
+			if i in polygon_idx_to_corner_to_polygons[polygon_idx]:
+				return polygon_idx_to_corner_to_polygons[polygon_idx][i]
+	return []
+
 	
 static func start_from_lowest_point(polygon: Array):
 	var lowest_point_index = 0

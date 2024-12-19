@@ -583,7 +583,7 @@ var fake_chars = []
 
 func generate_fake_chars():
 	#return
-	for i in range(3):
+	for i in range(8):
 		var char = {
 			"velocity" =50,
 			"position" = Vector2(16 + 36*i,100),
@@ -672,9 +672,9 @@ func move_along_direction(
 	#	if path:
 	#		character["dir"] = pos.direction_to(path[0])
 	#		character["org_dir"] = pos.direction_to(path[0])
-	while path and path[0].distance_to(pos) < 4:
+	while path and path[0].distance_to(pos) < 2:
 		path.pop_front()
-	if path and path[0].distance_to(pos) < 4:
+	if path and path[0].distance_to(pos) < 2:
 		path.pop_front()
 		if not path:
 			character["destination"] = null
@@ -682,6 +682,7 @@ func move_along_direction(
 		if path:
 			character["dir"] = pos.direction_to(path[0])
 			character["org_dir"] = pos.direction_to(path[0])
+			character["new_velocity"] = velocity * character["org_dir"]
 			#character["opt_velocity"] = velocity * character["org_dir"]
 	#if len(path) > 1 and not intersect_with_occupied_polygons(pos, path[1]):
 	#	if (path[1]-path[0]).dot(pos-path[0]) > 0:
@@ -757,7 +758,10 @@ var shortest_paths = []
 #var polygon_regions = []
 
 func _ready():
-			
+	
+	var rect = $Poly.get_viewport().get_visible_rect().size		
+	dim_x = rect.x
+	dim_y = rect.y
 	
 	mesh_data = MeshData.new()
 	if ResourceLoader.exists("res://mesh_data.tres"):
@@ -774,7 +778,6 @@ func _ready():
 		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
 		
 	if not mesh_data.convex_polygons:
-		var rect = $Poly.get_viewport().get_visible_rect().size
 		mesh_data.convex_polygons = PolygonUtils.allowed_area_splitted_convex(
 			mesh_data.large_polygons,
 			rect[0],
@@ -784,6 +787,10 @@ func _ready():
 	
 	if not mesh_data.polygon_neighbours_dict:
 		mesh_data.polygon_neighbours_dict = PolygonUtils.generate_polygon_neighbour_dict(mesh_data.convex_polygons)
+		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	
+	if not mesh_data.polygon_corner_neighbour_dict:
+		mesh_data.polygon_corner_neighbour_dict = PolygonUtils.generate_polygon_corner_neighbour_dict(mesh_data.convex_polygons)
 		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
 		
 	mesh_data.polygon_regions = OrcaUtils.generate_allowed_area_regions(mesh_data.convex_polygons)
@@ -864,6 +871,7 @@ func _ready():
 		mesh_data.convex_polygons,
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
+		mesh_data.polygon_corner_neighbour_dict,
 		mesh_data.pos_to_region
 	)
 	
@@ -909,10 +917,13 @@ func _input(event):
 				v = event.position - pos
 				opt_v = event.position - c1_ 
 		
+		
 func _physics_process(delta):
 	#OrcaUtils.test_randomized_bounded_lp_2()
 	queue_redraw()
 	
+	#cycle += 1
+	#if cycle % (randi()%100 + 1) == 0:	
 	set_shortest_path()
 	
 	for i in range(len(fake_chars)):
@@ -927,6 +938,7 @@ func _physics_process(delta):
 		mesh_data.convex_polygons,
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
+		mesh_data.polygon_corner_neighbour_dict,
 		mesh_data.pos_to_region
 	)
 	
