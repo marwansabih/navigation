@@ -653,49 +653,8 @@ static func randomized_bounded_lp(
 	var dir1 = Vector2(1,0)
 	var dir2 = Vector2(0,1)
 	
-	#v.x = -m1
-	#if v.x > 0:
-	#	v.x = m1
-	#	dir1 = -dir1
-	#v.y = - m2
-	#if v.y > 0:
-	#	v.y = m2
-	#	dir2 = -dir2
-	"""	
-	var plane_m1 = HalfPlane.new(
-		Vector2(-10000, 0),
-		Vector2(0,1),
-		dir1,
-		-1
-	)
-	var plane_m2 = HalfPlane.new(
-		Vector2(0, -10000),
-		Vector2(1,0),
-		dir2,
-		-1
-	)
-	
-	var plane_m3 = HalfPlane.new(
-		Vector2(10000, 0),
-		Vector2(0,1),
-		-dir1,
-		-1
-	)
-	var plane_m4 = HalfPlane.new(
-		Vector2(0, 10000),
-		Vector2(1,0),
-		-dir2,
-		-1
-	)
-	"""
-	
 	half_planes.shuffle()
 	var nr_planes = len(half_planes)
-	#var ps : Array[HalfPlane] = [plane_m1, plane_m2, plane_m3, plane_m4]
-	#half_planes = ps + half_planes
-	
-	
-	#v = v_opt
 	
 	var found_vs = []
 	
@@ -882,10 +841,17 @@ static func set_velocity(
 		#	opt_vel = agent["new_velocity"]
 		#opt_other = Vector2(0,0)
 		#opt_other = other["opt_velocity"]
-		var vs = closest_point_on_vo_boundary_2( p1, p2, 8, 8, 1, opt_vel - opt_other )
+		var vs = closest_point_on_vo_boundary_2( 
+			p1,
+			p2,
+			8,
+			8,
+			1,
+			opt_vel - opt_other 
+		)
 		var u: Vector2 = vs[2]
 		var n = vs[3]
-		#var factor = 1 #1/2
+		#var factor = 1/2
 		#if opt_other == Vector2(0,0):
 		#	factor = 1.0		
 		
@@ -905,7 +871,7 @@ static func set_velocity(
 	half_planes.append_array(h_ps)
 	half_planes.append_array(region)
 	
-	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 100)
+	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 400)
 	
 	var new_velocity = xs[1]
 	
@@ -933,7 +899,7 @@ static func set_velocity(
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
 		planes.append_array(new_region)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 400)
 		var velocity = vs[1]
 		if velocity == null:
 			continue
@@ -972,15 +938,9 @@ static func set_opt_velocities(agents: Array, paths: Array):
 		var path = paths[i]
 		if not path:
 			agents[i]["opt_velocity"] = Vector2(0,0)
-			#agents[i]["new_velocity"] = Vector2(0,0)
 			continue
 		var dir = agents[i]["position"].direction_to(path[0])
 		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
-		#var dist = agents[i]["position"].distance_to(path[0])
-		#if dist < agents[i]["velocity"] and dist > 5:
-		#	agents[i]["opt_velocity"] = (path[0] - agents[i]["position"])
-			
-		
 	
 static func get_other_agents(
 	agents,
