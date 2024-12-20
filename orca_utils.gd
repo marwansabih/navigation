@@ -229,13 +229,11 @@ static func closest_point_on_vo_boundary_2(
 	var on_t2 = on_half_line(t2, 2 * t2, opt_v )  
 	
 	if on_t1:
-		#print("on segment t1")
 		var n1 = outside_normal(Vector2(0, 0), t1, m1)
 		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t1, opt_v)
 		ns += [n1]
 		us += [u1]
 	if on_t2:
-		#print("on segment t1")
 		var n1 = outside_normal(Vector2(0, 0), t2, m1)
 		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t2, opt_v)
 		ns += [n1]
@@ -263,18 +261,6 @@ static func closest_point_on_vo_boundary_2(
 			dist = dist_c
 			u = u_c
 			n = ns[i]
-	
-	if u == null:
-		print("warning no u")
-		print(m1)
-		print(r1)
-		print(m1.length())
-		print(t1)
-		print(t2)
-		print(us)
-		print(ns)
-		#u = Vector2(0, 0)
-		#n = Vector2(1,0)
 	
 	return [t1, t2, u - opt_v, n]
 
@@ -492,15 +478,6 @@ static func evaluate_constraints(
 			h_p.p,
 			h_p.l_dir
 		)
-
-		if intersection == null:
-			#if half_planes.size() == 5:
-			#	print("no intersection found")
-			continue
-		#else:
-		#	print("instersection found")
-		#	print(left_bounded(h_p, half_plane))
-		#	print(right_bounded(h_p, half_plane))
 		
 		if left_bounded(h_p, half_plane):
 			if intersection != null and v_left.x < intersection.x:
@@ -547,31 +524,8 @@ static func evaluate_constraints(
 	)
 	
 	if closest_point != null and closest_point.x > left and closest_point.x < right and closest_point.y  < up and closest_point.y > down:
-		
-		#if half_planes.size() == 5:
-		#	print("nr planes")
-		#	print(half_planes.size())
-		#	print("left")
-		#	print(left)
-		#	print("right")
-		#	print(right)
-		#	print("up")
-		#	print(up)
-		#	print("down")
-		#	print(down)
-		#if g_c.length() + delta_v < closest_point.length():
-		#	return null
-		
 		return closest_point
 	
-	#print()
-	#print("opt_c" + str(org_c))
-	#print()
-	#print("before v_left: " + str(v_left))
-	#print("before v_right: " + str(v_right))
-	#print("before v_up: " + str(v_up))
-	#print("before v_down: " + str(v_down))
-	#print()
 	
 	if true: #last: # and false:
 		var circle_points = intersection_with_cirlce(
@@ -581,7 +535,6 @@ static func evaluate_constraints(
 		)
 	
 		if not circle_points:
-			print("null")
 			return null
 	
 		var intersection = circle_points["left"]
@@ -663,19 +616,7 @@ static func evaluate_constraints(
 	if v_down and v_down.y == -INF:
 		v_down = null
 	
-	#print("v_left: " + str(v_left))
-	#print("v_right: " + str(v_right))
-	#print("v_up: " + str(v_up))
-	#print("v_down: " + str(v_down))
-	#print()
-	
 	var nr_null = 0
-	
-	#for vel in [v_left, v_right, v_up, v_down]:
-	#	if not vel:
-#			nr_null += 1
-	#if nr_null >2:
-	#	return null
 	
 	if v_left and v_right and v_left.x > v_right.x:
 		return null
@@ -763,10 +704,7 @@ static func randomized_bounded_lp(
 	for i in range(nr_planes):
 		if element_of(half_planes[i], v): #and dist_current >= dist_current:
 			continue
-		#print(half_planes[i+4].p)
-		#print(half_planes[i+4].p_dir)
-		#print("found v")
-		#print(v)
+			
 		var h_ps = half_planes.slice(0, i) 
 		
 		wall_idx = half_planes[i].wall_idx
@@ -1000,12 +938,7 @@ static func set_velocity(
 		if velocity == null:
 			continue
 		var dist = velocity.distance_to(agent["opt_velocity"])
-		print("dist")
-		print(dist)
-		print("min_dist")
-		#print(min_dist)
 		if dist < min_dist:
-			print("found_new_velocity")
 			new_velocity = velocity
 			min_dist = dist
 		agent["new_velocity"] = new_velocity
@@ -1025,129 +958,13 @@ static func set_velocity(
 		if velocity == null:
 			continue
 		var dist = velocity.distance_to(agent["opt_velocity"])
-		print("dist")
-		print(dist)
-		print("min_dist")
-		#print(min_dist)
 		if dist < min_dist:
-			print("found_new_velocity")
 			new_velocity = velocity
 			min_dist = dist
 			found_region_idx = r_idx
 		agent["new_velocity"] = new_velocity
 	
 	agent["last_region_idx"] = found_region_idx 
-	
-	return	
-			
-	"""
-		
-		print("This is the wall idx")
-		print(wall_idx)
-		var new_velocity = xs[1]
-		if new_velocity == null:
-			new_velocity = Vector2(0,0)
-			#agent["opt_velocity"] = new_velocity#Vector2(0,0)
-			agent["new_velocity"] = new_velocity
-			return
-		if wall_idx != null and wall_idx != -1 and region_idx != null:
-			print("region idx before")
-			print(region_idx)
-			region_idx = polygon_to_neighbours[region_idx][wall_idx]
-			print("new region_idx")
-			#one_jump = true
-			print(region_idx)
-		if wall_idx == -1 or region_idx == null or region_idx == -1 or one_jump:
-			print("return")
-			#agent["opt_velocity"] = new_velocity
-			agent["new_velocity"] = new_velocity
-			return
-		region = adjust_region(polygon_regions[region_idx], agent["position"])
-		#one_jump = true
-	"""
-	
-	
-	#for wall in walls:
-	#	var w1 = wall[0]
-	#	var w2 = wall[1]
-	#	#var vs = determine_closest_point_on_wall_v_object(
-		#	agent["position"],
-		#	w1,
-		#	w2,
-		#	8,
-		#	opt_vel,
-		#	1.0
-		#)
-	#	var vs = determine_closest_point_on_wall_segment(
-	#		agent["position"],
-	#		w1,
-	#		w2,
-	#		8,
-	#		opt_vel,
-	#		1.0
-	#	)
-		
-	#	if not vs:
-	#		continue
-		
-	#	var u: Vector2 = vs[0]
-	#	var n: Vector2 = vs[1]
-	#	
-	#	wall_point_to_visited[w1] = true
-	#	wall_point_to_visited[w2] = true
-		
-		#var u: Vector2 = vs[2]
-		#var n = vs[3]	
-		
-	#	var h_p = HalfPlane.new(
-	#		opt_vel + u,
-	#		n.rotated(-PI/2),
-	#		n,
-	#		-1
-	#	)
-	#	h_ps.append(h_p)
-		
-	
-	#for point in wall_point_to_visited:
-	#	#print(wall_point_to_visited)
-	#	if not wall_point_to_visited[point]: #and point.distance_to(agent["position"]) < 50:
-	#		var vs = determine_closest_edge_point(
-	#			agent["position"],
-	#			point,
-	#			8,
-	#			opt_vel,
-	#			1.0,
-	#			wall_point_to_edge_dirs[point]
-	#		)
-			
-	#		var u = vs[0]
-	#		var n = vs[1]
-			
-	#		var h_p = HalfPlane.new(
-	#			opt_vel + u,
-	#			n.rotated(-PI/2),
-	#			n,
-	#			-1
-	#		)
-	#		h_ps.append(h_p)
-			
-	#		if len(vs) == 4:
-	#			var u2 = vs[0]
-	#			var n2 = vs[1]
-	#			var h_p2 = HalfPlane.new(
-	#				opt_vel + u,
-	#				n.rotated(-PI/2),
-	#				n,
-	#				-1
-	#			)
-	#			h_ps.append(h_p2)
-				
-		
-	#var new_velocity = randomized_bounded_lp(h_ps, agent["opt_velocity"], opt_vel, 50)
-	#if not new_velocity:
-	#	new_velocity = Vector2(0,0)
-	#	agent["opt_velocity"] = new_velocity#Vector2(0,0)
-	#agent["new_velocity"] = new_velocity
 	
 static func set_opt_velocities(agents: Array, paths: Array):
 	var nr_agent = len(agents)
@@ -1483,8 +1300,6 @@ static func find_opt_v(H,c):
 		if element_of(H[i], v):
 			continue
 		v = max_v(H[i], hps.slice(0, i+2), c)
-		#for h in hps.slice(0, i+2):
-		#	print(h.p)
 		if v == null:
 			return Vector2(0,0)
 	return v

@@ -131,29 +131,6 @@ func get_local_dir(pos: Vector2, goal: Vector2, delta):
 		delta,
 		in_poly_range
 	)
-	"""
-
-	var dir_source = Vector2(0,0)
-	var dist = pos.distance_to(goal)
-	for point in actor_positions:
-		dir_source += generate_source_velocity(pos, point, 3000,2)
-	var dir_wall = Vector2(0,0)
-	if pos_m in pos_to_walls:
-		for wall in pos_to_walls[pos_m]:
-			dir_wall += generate_wall_velocity(pos, wall, 10000000)
-	#var dir_goal = generate_source_velocity(pos, goal, -100 - dist, 0)
-	var dir_goal = generate_goal_velocity(pos, goal, 50)
-	#if dir_goal.length()/ dir_wall.length() < 1.2:
-	#	dir_goal *= 10
-	#if dir_source.length() / dir_goal.length() < 1.2:
-	#	dir_source * 4
-	#if dir_source.length() / dir_wall.length() < 1.2:
-	#	dir_wall * 4
-	# added random addition to prevent  "stuck in back and forth loop"
-	if dir_wall.length() > 0.1:
-		return 2*dir_wall.normalized()
-	return (dir_goal + dir_source).normalized()
-	"""
 
 func plane_in_dir(dir):
 	pass
@@ -580,6 +557,7 @@ var fake_character = {
 }
 
 var fake_chars = []
+var fake_chars_2 = []
 
 func generate_fake_chars():
 	#return
@@ -603,6 +581,18 @@ func generate_fake_chars():
 			"destination" = null
 		}
 		fake_chars.append(char2)
+		
+	for i in range(8):
+		var char = {
+			"velocity" =50,
+			"position" = Vector2(516 + 36*i,500),
+			"dir" = null,
+			"org_dir" = Vector2(0,0),
+			"local_path" = null,
+			"destination" = null
+		}
+		fake_chars_2.append(char)
+		continue
 	
 
 var fake_characters = []
@@ -749,7 +739,8 @@ func generate_connections():
 	return connections
 	
 var shortest_paths = []
-	
+var shortest_paths_2 = []
+
 # Called when the node enters the scene tree for the first time.
 
 
@@ -862,23 +853,23 @@ func _ready():
 			Vector2(800, 400)
 		)
 		shortest_paths.append(short_path)
-	
-	print("setup finished")
+	for fake_char in fake_chars_2:
+		fake_char["destination"] = Vector2(631, 195)
+		var short_path = shortest_path_between_positions(
+			fake_char["position"],
+			Vector2(800, 400)
+		)
+		shortest_paths_2.append(short_path)
 	
 	OrcaUtils.set_velocities(
-		fake_chars,
-		shortest_paths,
+		fake_chars + fake_chars_2,
+		shortest_paths + shortest_paths_2,
 		mesh_data.convex_polygons,
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
 		mesh_data.polygon_corner_neighbour_dict,
 		mesh_data.pos_to_region
 	)
-	
-	print("setup finished")
-	#generate_fake_characters()
-	#setup_actor_position_mesh()
-	#put_characters_to_mesh()
 	
 func set_shortest_path():
 	for i in len(shortest_paths):
@@ -889,33 +880,62 @@ func set_shortest_path():
 			fake_chars[i]["position"],
 			fake_chars[i]["destination"]
 		)
+		
+		if not short_path:
+			short_path = fake_chars[i]["last_shortest_path"]
+		
+		fake_chars[i]["last_shortest_path"] = short_path
+		
 		if short_path and len(short_path) > 1:
 			var dist =  fake_chars[i]["position"].distance_to(short_path[0])
 			if dist < 3:
 				short_path.pop_front()
 		shortest_paths[i] = short_path
 	
+	for i in len(shortest_paths_2):
+		if not fake_chars_2[i]["destination"]:
+			continue
+			
+		var short_path = shortest_path_between_positions(
+			fake_chars_2[i]["position"],
+			fake_chars_2[i]["destination"]
+		)
+		
+		if not short_path:
+			short_path = fake_chars_2[i]["last_shortest_path"]
+		
+		fake_chars[i]["last_shortest_path"] = short_path
+		
+		if short_path and len(short_path) > 1:
+			var dist =  fake_chars_2[i]["position"].distance_to(short_path[0])
+			if dist < 3:
+				short_path.pop_front()
+		shortest_paths_2[i] = short_path
+	
 func _input(event):
 	if event is InputEventMouseButton:
-		print("Mouse Click/Unclick at: ", event.position)
-		#shortest_path = shortest_path_between_positions(
-		#	fake_character["position"],
-		#	event.position
-		#)
-		for i in len(shortest_paths):
-			fake_chars[i]["destination"] = event.position
-			var short_path = shortest_path_between_positions(
-				fake_chars[i]["position"],
-				event.position
-			)
-			shortest_paths[i] = short_path
+
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
 				pos = event.position
 				c1_ = event.position
+				for i in len(shortest_paths):
+					fake_chars[i]["destination"] = event.position
+					var short_path = shortest_path_between_positions(
+						fake_chars[i]["position"],
+						event.position
+					)
+					shortest_paths[i] = short_path
 			MOUSE_BUTTON_RIGHT:
 				v = event.position - pos
-				opt_v = event.position - c1_ 
+				opt_v = event.position - c1_
+				for i in len(shortest_paths_2):
+					fake_chars_2[i]["destination"] = event.position
+					var short_path = shortest_path_between_positions(
+						fake_chars[i]["position"],
+						event.position
+					)
+					shortest_paths_2[i] = short_path 
 		
 		
 func _physics_process(delta):
@@ -929,12 +949,16 @@ func _physics_process(delta):
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
 		var s_p = shortest_paths[i]
-		print(s_p)
+		move_along_direction(f_c, s_p, delta)
+		
+	for i in range(len(fake_chars_2)):
+		var f_c = fake_chars_2[i]
+		var s_p = shortest_paths_2[i]
 		move_along_direction(f_c, s_p, delta)
 	
 	OrcaUtils.set_velocities(
-		fake_chars,
-		shortest_paths,
+		fake_chars + fake_chars_2,
+		shortest_paths + shortest_paths_2,
 		mesh_data.convex_polygons,
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
@@ -979,8 +1003,6 @@ func _draw():
 	
 	var vel = vs[2] + o_v
 	var the_n = vs[3]
-	print("the_n")
-	print(the_n)
 	
 	draw_line(pos_1, pos_1 + vel, Color.BLACK, 3)
 	draw_line(pos_1 + vel, pos_1 + vel + the_n * 10, Color.BLACK, 3)
@@ -1008,8 +1030,6 @@ func _draw():
 				var p =  mesh_data.polygon_neighbours_dict[h][i]
 				color = Color.WHITE
 				if p != null:
-					print("P")
-					print(p)
 					color = Color.RED
 				size = 5
 			if h == 0:
@@ -1037,12 +1057,13 @@ func _draw():
 		var pos = fake_chars[j]["position"]
 		if not pth:
 			continue
-		draw_line(pos, pth[0], Color.NAVY_BLUE, 3) 
+		draw_line(pos, pth[0], Color.WHITE, 3) 
 		for i in pth.size() - 1:
 			draw_line(pth[i], pth[i+1], Color.NAVY_BLUE, 3)
 	
 	for edge_point in mesh_data.edges:
 		draw_circle(edge_point, 3, Color.AZURE)
+	
 	
 	"""
 	
@@ -1389,7 +1410,11 @@ func _draw():
 	for fake_char in fake_chars:
 		draw_circle(fake_char["position"], 8, Color.NAVY_BLUE)
 		draw_line(fake_char["position"], fake_char["position"] + fake_char["new_velocity"], Color.RED, 3 )
-	
+		
+	for fake_char in fake_chars_2:
+		draw_circle(fake_char["position"], 8, Color.RED)
+		
+		
 	if fake_character["local_path"]:
 		var path = fake_character["local_path"]
 		for i in range(len(path) -1):
