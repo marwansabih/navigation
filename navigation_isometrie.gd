@@ -154,10 +154,11 @@ func generate_shadow_polygons(point):
 
 func generate_position_to_visible_edges():
 	
-	var position_to_visible_edges = {}
+	var position_to_visible_corner_ids = {}
+	
 	
 	var shadow_polygons = []
-	for edge in mesh_data.edges:
+	for edge in mesh_data.corners:
 		var polys = generate_shadow_polygons(edge)
 		shadow_polygons.append(polys)
 		
@@ -165,10 +166,10 @@ func generate_position_to_visible_edges():
 		for j in range(dim_y):
 			var visible_edges = []
 			var pos = Vector2(i*mesh_grid_size, j*mesh_grid_size)
-			for k in range(len(mesh_data.edges)):
+			for k in range(len(mesh_data.corners)):
 				if inside_polygons(pos, shadow_polygons[k]):
 					continue
-				var c_edge = mesh_data.edges[k]
+				var c_edge = mesh_data.corners[k]
 				var d = (c_edge - pos).normalized().rotated(PI/2)
 				
 				var criterea_1 = intersect_with_occupied_polygons(pos + d * 9, c_edge + d*9)
@@ -177,11 +178,22 @@ func generate_position_to_visible_edges():
 				if not criterea_1 and not criterea_2 and not criterea_3:
 					visible_edges.append(k)
 				
-			position_to_visible_edges[pos] = visible_edges
-	
-	mesh_data.position_to_visible_edges = position_to_visible_edges
+			position_to_visible_corner_ids[pos] = visible_edges
 			
-	ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	var position_to_visible_corner_group_id = {}
+	var corner_groups = []
+	
+	for pos in position_to_visible_corner_ids:
+		var corners = position_to_visible_corner_ids[pos]
+		corners.sort()
+		var idx = corner_groups.find(corners, 0)
+		if idx == -1:
+			position_to_visible_corner_group_id[pos] = len(corner_groups)
+			corner_groups.append(corners)
+		else:
+			position_to_visible_corner_group_id[pos] = idx
+	
+	return [position_to_visible_corner_group_id, corner_groups]
 	
 
 func subdivide_shortest_path(path):
@@ -219,8 +231,18 @@ func shortest_path_between_positions(
 	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
 	var p2_m = GeometryUtils.get_closest_mesh_position(p2, mesh_grid_size)
 	
-	var neigh_1 = mesh_data.position_to_visible_edges[p1_m]
-	var neigh_2 = mesh_data.position_to_visible_edges[p2_m]
+	var groups = mesh_data.corner_groups
+	var pos_to_corner_group_id = mesh_data.position_to_corner_group_id
+	
+	
+	var neigh_1 = mesh_data.corner_groups[
+		mesh_data.position_to_corner_group_id[p1_m]
+	]
+	var neigh_2 = mesh_data.corner_groups[
+		mesh_data.position_to_corner_group_id[p2_m]
+	]
+	
+	
 	var min_dist = INF
 	var edge_1
 	var edge_2
@@ -327,7 +349,7 @@ func move_along_direction(
 func generate_dists(graph):
 	var edges_to_dist = {}
 	var edges_to_path = {}
-	var size = len(mesh_data.edges)
+	var size = len(mesh_data.corners)
 	for i in range(size):
 		edges_to_dist[i] = {}
 		edges_to_path[i] = {}
@@ -340,10 +362,10 @@ func generate_dists(graph):
 func generate_connections():
 	var connections = []
 	
-	for i in range(len(mesh_data.edges)):
+	for i in range(len(mesh_data.corners)):
 		var line = []
-		for j in range(len(mesh_data.edges)):
-			if i == j or intersect_with_occupied_polygons(mesh_data.edges[i], mesh_data.edges[j]):
+		for j in range(len(mesh_data.corners)):
+			if i == j or intersect_with_occupied_polygons(mesh_data.corners[i], mesh_data.corners[j]):
 				line.append(false)
 			else:
 				line.append(true)
@@ -411,22 +433,20 @@ func _ready():
 					corners.append(e)
 		mesh_data.corners = corners
 		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
-	
-	#if not mesh_data.graph:
-	#	var connections = generate_connections()
-	#	mesh_data.graph = Dijstra.generate_graph(mesh_data.edges, connections)
-	#	ResourceSaver.save(mesh_data, "res://mesh_data.tres")
 		
-	if not mesh_data.edges_to_dist or not mesh_data.edges_to_path:	
-		var ds = generate_dists(mesh_data.graph)
+	if not mesh_data.edges_to_dist or not mesh_data.edges_to_path:
+		var connections = generate_connections()
+		var graph = Dijstra.generate_graph(mesh_data.corners, connections)	
+		var ds = generate_dists(graph)
 		mesh_data.edges_to_dist = ds[0]
 		mesh_data.edges_to_path = ds[1]
 		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
-	
-	var p_to_e = mesh_data.position_to_visible_edges
 		
-	if not mesh_data.position_to_visible_edges:
-		generate_position_to_visible_edges()
+	if not mesh_data.corner_groups:
+		var gs =  generate_position_to_visible_edges()
+		mesh_data.position_to_corner_group_id = gs[0]
+		mesh_data.corner_groups = gs[1]
+		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
 
 	for fake_char in fake_chars:
 		fake_char["destination"] = Vector2(800, 400)
@@ -435,6 +455,7 @@ func _ready():
 			Vector2(800, 400)
 		)
 		shortest_paths.append(short_path)
+		
 	for fake_char in fake_chars_2:
 		fake_char["destination"] = Vector2(631, 195)
 		var short_path = shortest_path_between_positions(

@@ -643,6 +643,7 @@ static func evaluate_constraints(
 			
 	return v
 
+
 static func randomized_bounded_lp(
 	half_planes : Array[HalfPlane],
 	c, 
@@ -771,6 +772,61 @@ static func adjust_region(region, agent_position):
 		adjusted_regions.append(half_plane)
 	return adjusted_regions
 	
+static func generate_agent_halfplanes(
+	agent,
+	others_all,
+	convex_polygons,
+	polygon_regions,
+	polygon_to_neighbours,
+	polygon_to_corners,
+	pos_to_region,
+	path
+):
+	# Determine the allowed halfplanes for 
+	var others = []
+	
+	for o in others_all:
+		if o["position"].distance_to(agent["position"]) < 25:
+			others.append(o)
+			
+	var opt_vel = agent["opt_velocity"]
+	var h_ps : Array[HalfPlane] = []
+	for other in others:
+		var opt_other = Vector2(0,0)
+		if "new_velocity" in other: 
+			opt_other = other["new_velocity"]
+		#if "opt_velocity" in other:
+		#	opt_other = other["opt_velocity"]
+		var p1 = agent["position"]
+		var p2 = other["position"]
+		if "new_velocity" in agent:
+			opt_vel = agent["new_velocity"]
+		#opt_other = Vector2(0,0)
+		#opt_other = other["opt_velocity"]
+		var vs = closest_point_on_vo_boundary_2( 
+			p1,
+			p2,
+			8,
+			8,
+			1,
+			opt_vel - opt_other 
+		)
+		var u: Vector2 = vs[2]
+		var n = vs[3]
+		var factor = 1 #1/2
+		if opt_other == Vector2(0,0):
+			factor = 1.0		
+		
+		var h_p = HalfPlane.new(
+			opt_vel + factor*u,
+			n.rotated(-PI/2),
+			n,
+			-1
+		)
+		h_ps.append(h_p)
+	agent["half_planes"] = h_ps 
+		
+	
 static func set_velocity(
 	agent,
 	others_all,
@@ -782,10 +838,6 @@ static func set_velocity(
 	path
 ):
 	var others = []
-	
-	var w11 = Vector2(200, 200)
-	var w21 = Vector2(400, 500)
-	var w31 = Vector2(450, 600)
 	
 	var region = null
 	var region_idx = null
@@ -823,47 +875,14 @@ static func set_velocity(
 			target_region_idx = i
 			break
 	
-	#var walls = walls_all # [[w11, w21], [w21, w31]]
-	
 	for o in others_all:
-		if o["position"].distance_to(agent["position"]) < 25:
+		if o["position"].distance_to(agent["position"]) < 10:
 			others.append(o)
 			
 	var opt_vel = agent["opt_velocity"]
-	var h_ps : Array[HalfPlane] = []
-	for other in others:
-		var opt_other = Vector2(0,0)
-		if "new_velocity" in other: 
-			opt_other = other["new_velocity"]
-		var p1 = agent["position"]
-		var p2 = other["position"]
-		#if "new_velocity" in agent:
-		#	opt_vel = agent["new_velocity"]
-		#opt_other = Vector2(0,0)
-		#opt_other = other["opt_velocity"]
-		var vs = closest_point_on_vo_boundary_2( 
-			p1,
-			p2,
-			8,
-			8,
-			1,
-			opt_vel - opt_other 
-		)
-		var u: Vector2 = vs[2]
-		var n = vs[3]
-		#var factor = 1/2
-		#if opt_other == Vector2(0,0):
-		#	factor = 1.0		
-		
-		var h_p = HalfPlane.new(
-			opt_vel + u,
-			n.rotated(-PI/2),
-			n,
-			-1
-		)
-		h_ps.append(h_p)
-		
-	var one_jump = false 
+	
+	var h_ps = agent["half_planes"]
+	
 	
 	
 	var half_planes : Array[HalfPlane] = []
@@ -965,7 +984,7 @@ static func set_velocities(
 	var resting_agents = []
 	var new_resting_agent = true
 	
-	
+
 	while new_resting_agent:
 		new_resting_agent = false
 		
@@ -974,6 +993,27 @@ static func set_velocities(
 		for i in range(nr_agents):
 			agent_idx.append(i)
 		agent_idx.shuffle()
+	
+		for i in range(nr_agents):
+			var agent = agents[agent_idx[i]]
+			#var others = agent.slice(0, i) + agents.slice(i+1, nr_agents)
+			var others_indices = agent_idx.slice(0, i) + agent_idx.slice(i+1, nr_agents)
+			
+			var others = get_other_agents(
+				agents,
+				others_indices
+			)
+			
+			generate_agent_halfplanes(
+				agent,
+				others,
+				convex_polygons,
+				polygon_regions,
+				polygon_to_neighbours,
+				polygon_to_corners,
+				pos_to_region,
+				paths[i]
+			)
 		
 		for i in range(nr_agents):
 			if i in resting_agents:
@@ -1000,6 +1040,7 @@ static func set_velocities(
 			if not agent["new_velocity"]:
 				resting_agents.append(i)
 				new_resting_agent = true
+		new_resting_agent = false
 		
 static func determine_tangent_to_circle(c, r: float):
 	var devisor = c.x**2 + c.y**2
