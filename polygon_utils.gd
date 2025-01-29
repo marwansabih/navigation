@@ -2,6 +2,352 @@ extends Node
 
 class_name PolygonUtils
 
+static func position_to_grid_position(
+	pos: Vector2,
+	grid_size: int
+):
+	return Vector2(
+		int(pos.x / grid_size),
+		int(pos.y / grid_size)
+	)
+
+static func generate_grid_position_to_walls(
+	dim_x,
+	dim_y,
+	grid_size,
+	polygons
+):
+	var x = int(dim_x / grid_size) + 1
+	var y = int(dim_y / grid_size) + 1
+	var grid_position_to_walls = {}
+	for k in x:
+		grid_position_to_walls[k] = {}
+		for l in y:
+			var x1 = k * grid_size
+			var x2 = x1 + grid_size
+			var y1 = l * grid_size
+			var y2 = y1 + grid_size
+			var walls = _get_walls_in_range(
+				polygons,
+				x1,
+				x2,
+				y1,
+				y2,
+				2*grid_size
+			)
+			grid_position_to_walls[k][l] = walls
+	return grid_position_to_walls
+
+static func _get_walls_in_range(
+	polygons,
+	x_min,
+	x_max,
+	y_min,
+	y_max,
+	margin
+):
+	var walls = []
+	
+	x_min -= margin
+	x_max += margin
+	y_min -= margin
+	y_max += margin
+	
+	"""
+	var ps = _get_polygons_in_range(
+		polygons,
+		x_min,
+		x_max,
+		y_min,
+		y_max,
+		margin
+	)
+	"""
+	var ps = polygons
+	for polygon in ps:#k in ps:
+		#var polygon = polygons[k]
+		for i in polygon.size():
+			var next_i = (i+1) % polygon.size()
+			var p1 = polygon[i]
+			var p2 = polygon[next_i]
+			if _intersection_with_line(
+				p1,
+				p2,
+				x_min,
+				x_max,
+				y_min,
+				y_max
+			):
+				walls.append([p1, p2])
+	
+	return walls
+			
+
+static func _intersection_with_line(
+	p1: Vector2,
+	p2: Vector2,
+	min_x,
+	max_x,
+	min_y,
+	max_y
+):
+	var p_min_x = p1.x if p1.x < p2.x else p2.x
+	var p_max_x = p1.x if p1.x > p2.x else p2.x
+	var p_min_y = p1.y if p1.y < p2.y else p2.y
+	var p_max_y = p1.y if p1.y > p2.y else p2.y
+	
+	var in_x_range_1 = min_x < p1.x and p1.x < max_x
+	var in_y_range_1 = min_y < p1.y and p1.y < max_y
+	
+	var in_x_range_2 = min_x < p2.x and p2.x < max_x
+	var in_y_range_2 = min_y < p2.y and p2.y < max_y
+	
+	if in_x_range_1 and in_y_range_1:
+		return true
+	
+	if in_x_range_2 and in_y_range_2:
+		return true
+	
+
+	if p_max_x < min_x:
+		return false
+	if p_min_x > max_x:
+		return false
+	if p_max_y < min_y:
+		return false
+	if p_min_y > max_y:
+		return false
+	
+	if p1.x == p2.x:
+		return true
+	if p1.y == p2.y:
+		return true
+	
+	var m = (p2.y - p1.y)/(p2.x-p1.x)
+	
+	var y1 =  p1.y + m * (min_x - p1.x)
+	
+	if min_y <= y1 and y1 <= max_y:
+		return true
+	
+	var y2 =  p1.y + m * (max_x - p1.x)
+	
+	if min_y <= y2 and y2 <= max_y:
+		return true
+		
+	var x1 =  (min_y - p1.y) /m + p1.x
+	
+	if min_x <= x1 and x1 <= max_x:
+		return true
+	
+	var x2 =  (max_y - p1.y) /m + p1.x
+	
+	if min_x <= x2 and x2 <= max_x:
+		return true
+		
+	return false
+	
+	#var delta_x = max_x - min_x
+	#var delta_y = max_y - min_y
+	
+	#p_min_x -= delta_x
+	#p_max_x += delta_x
+	#p_min_y -= delta_y
+	#p_max_y += delta_y 
+	
+	#if p_min_x > max_x:
+	#	return false
+	#if p_max_x < min_x:
+	#	return false
+	#if p_min_y > max_y:
+	#	return false
+	#if p_max_y < min_y:
+	#	return false
+	
+	var dir = (p1 - p2).rotated(PI/2)
+	
+	var scalar_1 = dir.x * (p1.x - min_x) + dir.y * (p1.y - min_y)
+	var scalar_2 = dir.x * (p1.x - min_x) + dir.y * (p1.y - max_y)
+	var scalar_3 = dir.x * (p1.x - max_x) + dir.y * (p1.y - max_y)
+	var scalar_4 = dir.x * (p1.x - max_x) + dir.y * (p1.y - min_y)
+	
+	if scalar_1 < 0 and scalar_2 < 0 and scalar_3 < 0 and scalar_4 < 0:
+		return false
+	if scalar_1 > 0 and scalar_2 > 0 and scalar_3 > 0 and scalar_4 > 0:
+		return false
+	return true
+	
+static func _get_polygons_in_range(
+	polygons,
+	min_x,
+	max_x,
+	min_y,
+	max_y,
+	margin
+):
+	
+	var found_polygons = []
+	
+	for i in polygons.size():
+		var polygon = polygons[i]
+		var n = polygon.size()
+		for j in polygon.size() - 1:
+			var point : Vector2 = polygon[j]
+			var next_point : Vector2 = polygon[(j + 1) % n]
+			var in_x_range = point.x >= min_x - margin and point.x <= max_x + margin
+			var in_y_range = point.y >= min_y - margin and point.y <= max_y + margin
+			if in_x_range and in_y_range:
+				found_polygons.append(i)
+				continue
+			if _intersection_with_line(
+				point,
+				next_point,
+				min_x - margin,
+				max_x + margin,
+				min_y - margin,
+				max_y + max_y
+			):
+				found_polygons.append(i)
+				continue
+				
+			
+			
+	return found_polygons
+
+static func get_entry_from_map(
+	map,
+	pos,
+	min_x,
+	max_x,
+	min_y,
+	max_y,
+	depth
+	):
+	var entry = map
+	for i in depth:
+		if i % 2 == 1:
+			var mid_x = (min_x + max_x)/2
+			if pos.x < mid_x:
+				entry = entry[0]
+				max_x = mid_x
+			else:
+				entry = entry[1]
+				min_x = mid_x
+			continue
+		var mid_y = (min_y + max_y)/2
+		if pos.y < mid_y:
+			entry = entry[0]
+			max_y = mid_y
+		else:
+			entry = entry[1]
+			min_y = mid_y
+	return entry
+
+static func generate_obstacle_map(
+	polygons,
+	margin,
+	obstacle_dict,
+	found_keys: Array,
+	x_min,
+	x_max,
+	y_min,
+	y_max,
+	depth
+):
+	if depth == 0:
+		var previous_key = null
+		var entry = obstacle_dict
+		for key in found_keys:
+			if not key in entry:
+				entry[key] = {}
+			entry = entry[key]
+		
+		var ps = _get_polygons_in_range(
+			polygons,
+			x_min,
+			x_max,
+			y_min,
+			y_max,
+			margin
+		)
+		entry["close_polygons"] = ps
+		return
+	depth -= 1
+	## if depth is even we divide in x otherwise in y direction
+	if depth % 2 == 0:
+		var x_mid = (x_min + x_max) /2 
+		var f_keys = found_keys.duplicate()
+		f_keys.append(0)
+		generate_obstacle_map(
+			polygons,
+			margin,
+			obstacle_dict,
+			f_keys,
+			x_min,
+			x_mid,
+			y_min,
+			y_max,
+			depth
+		)
+		
+		found_keys.append(1)
+		generate_obstacle_map(
+			polygons,
+			margin,
+			obstacle_dict,
+			found_keys,
+			x_mid,
+			x_max,
+			y_min,
+			y_max,
+			depth
+		)
+		return
+	var y_mid = (y_min + y_max) /2 
+	var f_keys = found_keys.duplicate()
+	f_keys.append(0)
+	generate_obstacle_map(
+		polygons,
+		margin,
+		obstacle_dict,
+		f_keys,
+		x_min,
+		x_max,
+		y_min,
+		y_mid,
+		depth
+	)
+		
+	found_keys.append(1)
+	generate_obstacle_map(
+		polygons,
+		margin,
+		obstacle_dict,
+		found_keys,
+		x_min,
+		x_max,
+		y_mid,
+		y_max,
+		depth
+	)
+
+static func setup_polygon_intervalls(polygon):
+	var x_intervalls = []
+	var y_intervalls = []
+	for i in range(polygon.size()):
+		var p1 = polygon[i]
+		var p2 = polygon[(i+1)% polygon.size()]
+		if p1.x < p2.x:
+			x_intervalls.append([p1.x, p2.x, i])
+			y_intervalls.append([p1.y, p2.y])
+		else:
+			x_intervalls.append([p2.x, p1.x, i])
+			y_intervalls.append([p2.y, p1.y])
+		x_intervalls.sort_custom(func(p,q): return p[0] < q[0])
+	return [x_intervalls, y_intervalls]
+			
+#static func find_
+
 static func clockwise_rotation(polygon):
 	var sum = 0
 	for i in range(polygon.size()):
@@ -25,6 +371,8 @@ static func find_polygon_idx_by_wall(polygons: Array, p1: Vector2, p2: Vector2, 
 		if i == current_idx:
 			continue
 		var polygon = polygons[i]
+		if polygon == null:
+			continue
 		for j in polygon.size():
 			var p1_ = polygon[j]
 			var p2_ = polygon[(j+1) % polygon.size()]
@@ -38,6 +386,8 @@ static func generate_polygon_neighbour_dict(polygons: Array):
 	var polygon_idx_to_wall_idx_to_polygon_idx = {}
 	for i in polygons.size():
 		var polygon = polygons[i]
+		if polygon == null:
+			continue
 		polygon_idx_to_wall_idx_to_polygon_idx[i] = {}
 		for j in polygon.size():
 			var p1 = polygon[j]
@@ -60,6 +410,8 @@ static func find_polygons_by_corner(
 	for i in polygons.size():
 		if i == current_index:
 			continue
+		if polygons[i] == null:
+			continue
 		if corner in polygons[i]:
 			found_polys.append(i)
 	return found_polys
@@ -69,6 +421,8 @@ static func generate_polygon_corner_neighbour_dict(polygons: Array):
 	var polygon_idx_to_corner_to_polygons = {}
 	for i in polygons.size():
 		var polygon = polygons[i]
+		if polygon == null:
+			continue
 		polygon_idx_to_corner_to_polygons[i] = {}
 		for j in polygon.size():
 			if j == i:
@@ -470,58 +824,58 @@ static func add_triangle_to_poylgon(polygon: Array, triangle: Array):
 	return new_polygon
 
 static func  allowed_area_splitted_convex(
-		polyogons : Array,
+	polyogons : Array,
+	width,
+	height
+):
+	polyogons = order_clockwise(polyogons)
+	var allowed_area = extract_allowed_area(
+		polyogons,
 		width,
 		height
-	):
-		polyogons = order_clockwise(polyogons)
-		var allowed_area = extract_allowed_area(
-			polyogons,
-			width,
-			height
-		)
+	)
 		#return [allowed_area]
 		
-		var triangles = triangulate_polygon(allowed_area)
+	var triangles = triangulate_polygon(allowed_area)
 		
 		
-		var convex_polygons = []
+	var convex_polygons = []
 		
-		var recent_polygon = triangles.pop_front()
-		var latest_triangle = recent_polygon
+	var recent_polygon = triangles.pop_front()
+	var latest_triangle = recent_polygon
+	
+	while triangles:
+		for i in triangles.size():
+			var nr_common_points = 0
+			var triangle = triangles[i] 
+			if triangle[0] in latest_triangle:
+				nr_common_points += 1
+			if triangle[1] in latest_triangle:
+				nr_common_points += 1
+			if triangle[2] in latest_triangle:
+				nr_common_points += 1
+			if nr_common_points == 2:
+				triangles.pop_at(i)
+				var polygon_candidate = add_triangle_to_poylgon(
+					recent_polygon,
+					triangle
+				)
+				if is_convex_polygon(polygon_candidate):
+					recent_polygon = polygon_candidate
+					latest_triangle = triangle
+				else:
+					convex_polygons.append(recent_polygon)
+					recent_polygon = triangle
+					latest_triangle = triangle
+				break
+		convex_polygons.append(recent_polygon)
+		recent_polygon = triangles.pop_front()
+		latest_triangle = recent_polygon
 		
-		while triangles:
-			for i in triangles.size():
-				var nr_common_points = 0
-				var triangle = triangles[i] 
-				if triangle[0] in latest_triangle:
-					nr_common_points += 1
-				if triangle[1] in latest_triangle:
-					nr_common_points += 1
-				if triangle[2] in latest_triangle:
-					nr_common_points += 1
-				if nr_common_points == 2:
-					triangles.pop_at(i)
-					var polygon_candidate = add_triangle_to_poylgon(
-						recent_polygon,
-						triangle
-					)
-					if is_convex_polygon(polygon_candidate):
-						recent_polygon = polygon_candidate
-						latest_triangle = triangle
-					else:
-						convex_polygons.append(recent_polygon)
-						recent_polygon = triangle
-						latest_triangle = triangle
-					break
-			convex_polygons.append(recent_polygon)
-			recent_polygon = triangles.pop_front()
-			latest_triangle = recent_polygon
+	if not recent_polygon in convex_polygons and recent_polygon != null:
+		convex_polygons.append(recent_polygon)			
 		
-		if not recent_polygon in convex_polygons:
-			convex_polygons.append(recent_polygon)			
-		
-		return convex_polygons
+	return convex_polygons
 					
 					
 			 

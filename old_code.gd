@@ -943,4 +943,130 @@ func _process(delta):
 	print(Vector2(483.7, 401.763).distance_to(Vector2(499.079, 406.179)))
 	
 	print(v)
-	"""
+
+static func test_randomized_bounded_lp_2():
+	var plane_1 = HalfPlane.new(
+		Vector2(0, 25),
+		Vector2(1, -2).normalized(),
+		Vector2(2, 1).normalized(),
+		-1
+	)
+	
+	var plane_2 = HalfPlane.new(
+		Vector2(0, 25),
+		Vector2(1,0),
+		Vector2(0,-1),
+		-1
+	)
+	
+	var planes : Array[HalfPlane] = [plane_1, plane_2]
+	
+	var c = Vector2(100, 30)
+	
+	var opt_x = c
+	
+	var p = randomized_bounded_lp(
+		planes,
+		c,
+		c,
+		20
+	)
+
+
+static func test_randomized_bounded_lp():
+	var plane_1 = HalfPlane.new(
+		Vector2(10, 10),
+		Vector2(0,-1),
+		Vector2(-1,0),
+		-1
+	)
+	
+	var plane_2 = HalfPlane.new(
+		Vector2(10, 0),
+		Vector2(-1,0),
+		Vector2(0,1),
+		-1
+	)
+	
+	var plane_3 = HalfPlane.new(
+		Vector2(0, 10),
+		Vector2(1, 0),
+		Vector2(0, -1),
+		-1
+	)
+	
+	var plane_4 = HalfPlane.new(
+		Vector2(0, 0),
+		Vector2(0, 1),
+		Vector2(1, 0),
+		-1
+	)
+	
+	var planes : Array[HalfPlane] = [
+		plane_1,
+		plane_2,
+		plane_3,
+		plane_4
+	]
+	
+	var c = Vector2(30, 30)
+	
+	var opt_x = Vector2(
+		30,
+		30
+	)
+	
+	var p = randomized_bounded_lp(
+		planes,
+		c,
+		c,
+		30
+	)
+	
+static func test_find_opt_v():
+	var plane_1 = HalfPlane.new(
+		Vector2(10, 10),
+		Vector2(0,-1),
+		Vector2(-1,0),
+		-1
+	)
+	
+	var plane_2 = HalfPlane.new(
+		Vector2(10, 0),
+		Vector2(-1,0),
+		Vector2(0,1),
+		-1
+	)
+	
+	var plane_3 = HalfPlane.new(
+		Vector2(0, 10),
+		Vector2(1, 0),
+		Vector2(0, -1),
+		-1
+	)
+	
+	var plane_4 = HalfPlane.new(
+		Vector2(0, 0),
+		Vector2(0, 1),
+		Vector2(1, 0),
+		-1
+	)
+	var H = [
+		plane_1,
+		plane_2,
+		plane_3,
+		plane_4
+	]
+	
+	
+	var c = Vector2(-1,-1)
+	
+	var opt_v = find_opt_v(
+		H,
+		c
+	)
+	
+	print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+	print("Opt_v is: " + str(opt_v))
+	print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
+		"""

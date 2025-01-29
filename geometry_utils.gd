@@ -61,7 +61,6 @@ static func get_time_overlaps(
 	var delta_t = h/v2.length()
 	
 	return p2 + (t + delta_t) * v2
-	return p1 + (s + delta_s) * v1
 
 static func get_closest_edge(edges, pos):
 	var min = INF

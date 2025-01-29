@@ -680,84 +680,7 @@ static func randomized_bounded_lp(
 			return [null, null]
 			
 	return [wall_idx, v]
-
-static func test_randomized_bounded_lp():
-	var plane_1 = HalfPlane.new(
-		Vector2(10, 10),
-		Vector2(0,-1),
-		Vector2(-1,0),
-		-1
-	)
 	
-	var plane_2 = HalfPlane.new(
-		Vector2(10, 0),
-		Vector2(-1,0),
-		Vector2(0,1),
-		-1
-	)
-	
-	var plane_3 = HalfPlane.new(
-		Vector2(0, 10),
-		Vector2(1, 0),
-		Vector2(0, -1),
-		-1
-	)
-	
-	var plane_4 = HalfPlane.new(
-		Vector2(0, 0),
-		Vector2(0, 1),
-		Vector2(1, 0),
-		-1
-	)
-	
-	var planes : Array[HalfPlane] = [
-		plane_1,
-		plane_2,
-		plane_3,
-		plane_4
-	]
-	
-	var c = Vector2(30, 30)
-	
-	var opt_x = Vector2(
-		30,
-		30
-	)
-	
-	var p = randomized_bounded_lp(
-		planes,
-		c,
-		c,
-		30
-	)
-	
-static func test_randomized_bounded_lp_2():
-	var plane_1 = HalfPlane.new(
-		Vector2(0, 25),
-		Vector2(1, -2).normalized(),
-		Vector2(2, 1).normalized(),
-		-1
-	)
-	
-	var plane_2 = HalfPlane.new(
-		Vector2(0, 25),
-		Vector2(1,0),
-		Vector2(0,-1),
-		-1
-	)
-	
-	var planes : Array[HalfPlane] = [plane_1, plane_2]
-	
-	var c = Vector2(100, 30)
-	
-	var opt_x = c
-	
-	var p = randomized_bounded_lp(
-		planes,
-		c,
-		c,
-		20
-	)
 	
 static func adjust_region(region, agent_position):
 	var adjusted_regions = []
@@ -786,7 +709,7 @@ static func generate_agent_halfplanes(
 	var others = []
 	
 	for o in others_all:
-		if o["position"].distance_to(agent["position"]) < 25:
+		if o["position"].distance_to(agent["position"]) < 18:
 			others.append(o)
 			
 	var opt_vel = agent["opt_velocity"]
@@ -826,6 +749,62 @@ static func generate_agent_halfplanes(
 		h_ps.append(h_p)
 	agent["half_planes"] = h_ps 
 		
+
+static func generate_agent_halfplanes_2(
+	agent,
+	others_all,
+	convex_polygons,
+	polygon_regions,
+	polygon_to_neighbours,
+	polygon_to_corners,
+	pos_to_region,
+	path
+):
+	# Determine the allowed halfplanes for 
+	var others = []
+	
+	for o in others_all:
+		var o_pos = o["agent"].position
+		var a_pos = agent["agent"].position
+		if o_pos.distance_to(a_pos) < 18:
+			others.append(o)
+			
+	var opt_vel = agent["opt_velocity"]
+	var h_ps : Array[HalfPlane] = []
+	for other in others:
+		var opt_other = Vector2(0,0)
+		if "new_velocity" in other: 
+			opt_other = other["new_velocity"]
+		#if "opt_velocity" in other:
+		#	opt_other = other["opt_velocity"]
+		var p1 = agent["agent"].position
+		var p2 = other["agent"].position
+		if "new_velocity" in agent:
+			opt_vel = agent["new_velocity"]
+		#opt_other = Vector2(0,0)
+		#opt_other = other["opt_velocity"]
+		var vs = closest_point_on_vo_boundary_2( 
+			p1,
+			p2,
+			8,
+			8,
+			1,
+			opt_vel - opt_other 
+		)
+		var u: Vector2 = vs[2]
+		var n = vs[3]
+		var factor = 1 #1/2
+		if opt_other == Vector2(0,0):
+			factor = 1.0		
+		
+		var h_p = HalfPlane.new(
+			opt_vel + factor*u,
+			n.rotated(-PI/2),
+			n,
+			-1
+		)
+		h_ps.append(h_p)
+	agent["half_planes"] = h_ps 
 	
 static func set_velocity(
 	agent,
@@ -855,7 +834,7 @@ static func set_velocity(
 			visited_regions.append(convex_polygons[i])
 			region_idx = i
 			break
-	if not region_idx:
+	if region_idx == null:
 		region_idx = agent["last_region_idx"]
 		region = adjust_region(polygon_regions[region_idx], agent["position"])
 		visited_regions.append(convex_polygons[region_idx])
@@ -898,6 +877,8 @@ static func set_velocity(
 		new_velocity = Vector2(0,0)
 	agent["new_velocity"] = new_velocity
 	
+	if PolygonUtils.in_polygon(convex_polygons[region_idx], agent["position"] + agent["opt_velocity"] ):
+		return
 		
 	var min_dist = new_velocity.distance_to(agent["opt_velocity"])
 	# Force traveling to next region if current region doesn't hold the next path stop
@@ -951,6 +932,185 @@ static func set_velocity(
 	
 	agent["last_region_idx"] = found_region_idx 
 	
+static func in_wall_range(
+	pos: Vector2,
+	grid_position_to_walls
+):
+	var grid_pos = PolygonUtils.position_to_grid_position(
+		pos,
+		32
+	)
+	print(grid_pos)
+	var walls = grid_position_to_walls[int(grid_pos.x)][int(grid_pos.y)]
+	for wall in walls:
+		var w_p = GeometryUtils.get_closest_point_on_line(
+			wall[0],
+			wall[1],
+			pos
+		)
+		var dist = pos.distance_to(
+			w_p
+		)
+		var dist_to_p = wall[0].distance_to(
+			w_p
+		)
+		
+		var dist_to_p2 = wall[1].distance_to(
+			w_p
+		)
+		
+		var wall_length = wall[0].distance_to(
+			wall[1]
+		)
+		
+		if dist_to_p > wall_length:
+			return false
+		if dist_to_p2 > wall_length:
+			return false
+		
+		if dist < 32:
+			return true
+	
+	return false
+	
+	
+static func set_velocity_2(
+	agent,
+	others_all,
+	convex_polygons,
+	polygon_regions,
+	polygon_to_neighbours,
+	polygon_to_corners,
+	pos_to_region,
+	path,
+	grid_position_to_walls
+):
+	var others = []
+	
+	var region = null
+	var region_idx = null
+	
+	var visited_regions = []
+	
+	#var pos = GeometryUtils.get_closest_mesh_position(agent["position"], 2)
+	
+	#region = pos_to_region[pos]
+	
+	var near_wall = in_wall_range(
+		agent["agent"].position,
+		grid_position_to_walls
+	)
+
+	for i in convex_polygons.size():
+		if PolygonUtils.in_polygon(convex_polygons[i], agent["agent"].position):
+			region = adjust_region(polygon_regions[i], agent["agent"].position)
+			visited_regions.append(convex_polygons[i])
+			region_idx = i
+			break
+	if region_idx == null:
+		near_wall = false
+		region_idx = agent["last_region_idx"]
+		region = adjust_region(polygon_regions[region_idx], agent["agent"].position)
+		visited_regions.append(convex_polygons[region_idx])
+		#for i in convex_polygons.size():
+		#	if PolygonUtils.in_polygon(convex_polygons[i], agent["position"] + agent["opt_velocity"]):
+		#		region = adjust_region(polygon_regions[i], agent["position"])
+		#		visited_regions.append(convex_polygons[i])
+		#		region_idx = i
+		#		break
+	
+	var target_region_idx = -1
+	
+	for i in convex_polygons.size():
+		if not path:
+			continue
+		if PolygonUtils.in_polygon(convex_polygons[i], path[0]):
+			target_region_idx = i
+			break
+	
+	for o in others_all:
+		if o["agent"].position.distance_to(agent["agent"].position) < 10:
+			others.append(o)
+			
+	var opt_vel = agent["opt_velocity"]
+	
+	var h_ps = agent["half_planes"]
+	
+	
+	
+	var half_planes : Array[HalfPlane] = []
+	
+	half_planes.append_array(h_ps)
+	if near_wall:
+		half_planes.append_array(region)
+	
+	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 100)
+	
+	var new_velocity = xs[1]
+	
+	if not new_velocity:
+		new_velocity = Vector2(0,0)
+	agent["new_velocity"] = new_velocity
+	
+	if not near_wall:
+		agent["last_region_idx"] = region_idx
+		return
+	
+	if PolygonUtils.in_polygon(convex_polygons[region_idx], agent["agent"].position + agent["opt_velocity"] ):
+		return
+	
+	var min_dist = new_velocity.distance_to(agent["opt_velocity"])
+	# Force traveling to next region if current region doesn't hold the next path stop
+	if path and not region_idx == target_region_idx and min_dist > 3:
+		min_dist = INF
+	
+	var corner_neighbours = PolygonUtils.pos_to_corner_neighbours(
+		agent["agent"].position,
+		region_idx,
+		convex_polygons,
+		polygon_to_corners
+	)
+	
+	for r_idx in corner_neighbours:
+		if r_idx == null:
+			continue
+		var new_region = adjust_region(polygon_regions[r_idx], agent["agent"].position)
+		var planes : Array[HalfPlane] = []
+		planes.append_array(h_ps)
+		planes.append_array(new_region)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var velocity = vs[1]
+		if velocity == null:
+			continue
+		var dist = velocity.distance_to(agent["opt_velocity"])
+		if dist < min_dist:
+			new_velocity = velocity
+			min_dist = dist
+		agent["new_velocity"] = new_velocity
+	
+	var found_region_idx = region_idx
+	
+	for w_index in polygon_to_neighbours[region_idx]:
+		var r_idx = polygon_to_neighbours[region_idx][w_index]
+		if r_idx == null:
+			continue
+		var new_region = adjust_region(polygon_regions[r_idx], agent["agent"].position)
+		var planes : Array[HalfPlane] = []
+		planes.append_array(h_ps)
+		planes.append_array(new_region)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var velocity = vs[1]
+		if velocity == null:
+			continue
+		var dist = velocity.distance_to(agent["opt_velocity"])
+		if dist < min_dist:
+			new_velocity = velocity
+			min_dist = dist
+			found_region_idx = r_idx
+		agent["new_velocity"] = new_velocity
+	
+	agent["last_region_idx"] = found_region_idx 
+	
 static func set_opt_velocities(agents: Array, paths: Array):
 	var nr_agent = len(agents)
 	for i in range(nr_agent):
@@ -959,6 +1119,16 @@ static func set_opt_velocities(agents: Array, paths: Array):
 			agents[i]["opt_velocity"] = Vector2(0,0)
 			continue
 		var dir = agents[i]["position"].direction_to(path[0])
+		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
+	
+static func set_opt_velocities_2(agents: Array, paths: Array):
+	var nr_agent = len(agents)
+	for i in range(nr_agent):
+		var path = paths[i]
+		if not path:
+			agents[i]["opt_velocity"] = Vector2(0,0)
+			continue
+		var dir = agents[i]["agent"].position.direction_to(path[0])
 		agents[i]["opt_velocity"] = dir * agents[i]["velocity"]
 	
 static func get_other_agents(
@@ -1036,6 +1206,86 @@ static func set_velocities(
 				polygon_to_corners,
 				pos_to_region,
 				paths[i]
+			)
+			if not agent["new_velocity"]:
+				resting_agents.append(i)
+				new_resting_agent = true
+		new_resting_agent = false
+		
+static func set_velocities_2(
+	agent_id_to_agent_data,
+	convex_polygons,
+	polygon_regions,
+	polygon_to_neighbours,
+	polygon_to_corners,
+	pos_to_region,
+	grid_position_to_walls
+):
+	var agents = []
+	var paths = []
+	for agent_id in agent_id_to_agent_data:
+		var agent = agent_id_to_agent_data[agent_id]
+		agents.append(agent)
+		paths.append(agent["shortest_path"])
+		
+	set_opt_velocities_2(agents, paths)
+	var nr_agents = len(agents)
+	var resting_agents = []
+	var new_resting_agent = true
+	
+
+	while new_resting_agent:
+		new_resting_agent = false
+		
+		var agent_idx = []
+		
+		for i in range(nr_agents):
+			agent_idx.append(i)
+		agent_idx.shuffle()
+	
+		for i in range(nr_agents):
+			var agent = agents[agent_idx[i]]
+			#var others = agent.slice(0, i) + agents.slice(i+1, nr_agents)
+			var others_indices = agent_idx.slice(0, i) + agent_idx.slice(i+1, nr_agents)
+			
+			var others = get_other_agents(
+				agents,
+				others_indices
+			)
+			
+			generate_agent_halfplanes_2(
+				agent,
+				others,
+				convex_polygons,
+				polygon_regions,
+				polygon_to_neighbours,
+				polygon_to_corners,
+				pos_to_region,
+				paths[i]
+			)
+		
+		for i in range(nr_agents):
+			if i in resting_agents:
+				continue
+			var agent = agents[agent_idx[i]]
+			#var others = agent.slice(0, i) + agents.slice(i+1, nr_agents)
+			var others_indices = agent_idx.slice(0, i) + agent_idx.slice(i+1, nr_agents)
+			
+			var others = get_other_agents(
+				agents,
+				others_indices
+			)
+			
+			set_velocity_2(
+				agent,
+				others,
+				convex_polygons,
+				polygon_regions,
+				polygon_to_neighbours,
+				polygon_to_corners,
+				pos_to_region,
+				paths[i],
+				grid_position_to_walls
 			)
 			if not agent["new_velocity"]:
 				resting_agents.append(i)
@@ -1348,51 +1598,4 @@ static func lexigraphical_max(p1, p2, c):
 	if p1.x == p2.x and p1.y < p2.y:
 		return p1
 	return p2
-	
-static func test_find_opt_v():
-	var plane_1 = HalfPlane.new(
-		Vector2(10, 10),
-		Vector2(0,-1),
-		Vector2(-1,0),
-		-1
-	)
-	
-	var plane_2 = HalfPlane.new(
-		Vector2(10, 0),
-		Vector2(-1,0),
-		Vector2(0,1),
-		-1
-	)
-	
-	var plane_3 = HalfPlane.new(
-		Vector2(0, 10),
-		Vector2(1, 0),
-		Vector2(0, -1),
-		-1
-	)
-	
-	var plane_4 = HalfPlane.new(
-		Vector2(0, 0),
-		Vector2(0, 1),
-		Vector2(1, 0),
-		-1
-	)
-	var H = [
-		plane_1,
-		plane_2,
-		plane_3,
-		plane_4
-	]
-	
-	
-	var c = Vector2(-1,-1)
-	
-	var opt_v = find_opt_v(
-		H,
-		c
-	)
-	
-	print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
-	print("Opt_v is: " + str(opt_v))
-	print("OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
 	

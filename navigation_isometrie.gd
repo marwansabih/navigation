@@ -218,14 +218,41 @@ func shortest_path_between_positions(
 ):
 	var dir = p2 - p1
 	
-	var d = dir.rotated(PI/2).normalized()
+	var region_idx = -1
 	
-	var criterea_1 = intersect_with_occupied_polygons(p1 + d * 12, p2 + d*9)
-	var criterea_2 = intersect_with_occupied_polygons(p1 - d * 12, p2 - d*9)
+	var neighbour_idx = -1
+	
+	for i in mesh_data.convex_polygons.size():
+		var p = mesh_data.convex_polygons[i]
+		var p1_inside = PolygonUtils.in_polygon(p, p1)
+		var p2_inside = PolygonUtils.in_polygon(p, p2)
+		if p1_inside:
+			region_idx = i
+		if p2_inside:
+			neighbour_idx = i
+		if p1_inside and p2_inside:
+			return [p2]
+	
+	if region_idx == -1:
+		mesh_data.polygon_neighbours_dict[region_idx] = []
+	for wall_idx in mesh_data.polygon_neighbours_dict[region_idx]:
+		if mesh_data.polygon_neighbours_dict[region_idx][wall_idx] == neighbour_idx:
+			return [p2]
+		
+			
+	
+	#var d = dir.rotated(PI/2).normalized()
+	
+	#var criterea_1 = intersect_with_occupied_polygons(p1 + d * 12, p2 + d*9)
+	#var criterea_2 = intersect_with_occupied_polygons(p1 - d * 12, p2 - d*9)
+	#dirty but fast
 	var criterea_3 = intersect_with_occupied_polygons(p1, p2)
 	
-	if not criterea_1 and not criterea_2 and not criterea_3:
+	if not criterea_3:
 		return [p2]
+	
+	#if not criterea_1 and not criterea_2 and not criterea_3:
+	#	return [p2]
 	
 	
 	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
@@ -258,7 +285,7 @@ func shortest_path_between_positions(
 				min_dist = dist
 	
 	if not edge_1 or not edge_2:
-		return
+		return 
 	
 	var path = mesh_data.edges_to_path[edge_1][edge_2]
 	var s_path = [] #[p1]
@@ -281,7 +308,7 @@ var fake_chars_2 = []
 
 func generate_fake_chars():
 	#return
-	for i in range(4):
+	for i in range(8):
 		var char = {
 			"velocity" =50,
 			"position" = Vector2(16 + 36*i,100),
@@ -291,7 +318,7 @@ func generate_fake_chars():
 			"destination" = null
 		}
 		fake_chars.append(char)
-		continue
+		#continue
 		var char2 = {
 			"velocity" =50,
 			"position" = Vector2(16 + 36*i,50),
@@ -302,7 +329,7 @@ func generate_fake_chars():
 		}
 		fake_chars.append(char2)
 		
-	for i in range(4):
+	for i in range(8):
 		var char = {
 			"velocity" =50,
 			"position" = Vector2(516 + 36*i,500),
@@ -312,6 +339,16 @@ func generate_fake_chars():
 			"destination" = null
 		}
 		fake_chars_2.append(char)
+		#continue
+		var char_2 = {
+			"velocity" =50,
+			"position" = Vector2(100 + 36*i,500),
+			"dir" = null,
+			"org_dir" = Vector2(0,0),
+			"local_path" = null,
+			"destination" = null
+		}
+		fake_chars_2.append(char_2)
 	
 
 func inisde_polygon(pos):
@@ -375,78 +412,73 @@ func generate_connections():
 var shortest_paths = []
 var shortest_paths_2 = []
 
-func _ready():
+func setup_mesh_data():
 	
 	var rect = $Poly.get_viewport().get_visible_rect().size		
 	dim_x = rect.x
 	dim_y = rect.y
 	
 	mesh_data = MeshData.new()
+	# gnerating polygon_regions because self defined datastructure can't be saved
 	if ResourceLoader.exists("res://mesh_data.tres"):
 		mesh_data = ResourceLoader.load("res://mesh_data.tres")
+		mesh_data.polygon_regions = OrcaUtils.generate_allowed_area_regions(mesh_data.convex_polygons)
+		return
 	
 	var large_polygons = []
-	if not mesh_data.occupied_polygons:
-		var ps = setup_large_polygons()
-		mesh_data.occupied_polygons = ps[0]
-		large_polygons = ps[1]
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+
+	var polys = setup_large_polygons()
+	mesh_data.occupied_polygons = polys[0]
+	large_polygons = polys[1]
 		
-	if not mesh_data.convex_polygons:
-		mesh_data.convex_polygons = PolygonUtils.allowed_area_splitted_convex(
-			large_polygons,
-			rect[0],
-			rect[1]
-		)
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	mesh_data.convex_polygons = PolygonUtils.allowed_area_splitted_convex(
+		large_polygons,
+		rect[0],
+		rect[1]
+	)
 	
-	if not mesh_data.polygon_neighbours_dict:
-		mesh_data.polygon_neighbours_dict = PolygonUtils.generate_polygon_neighbour_dict(mesh_data.convex_polygons)
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	mesh_data.polygon_neighbours_dict = PolygonUtils.generate_polygon_neighbour_dict(mesh_data.convex_polygons)
 	
-	if not mesh_data.polygon_corner_neighbour_dict:
-		mesh_data.polygon_corner_neighbour_dict = PolygonUtils.generate_polygon_corner_neighbour_dict(mesh_data.convex_polygons)
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	mesh_data.polygon_corner_neighbour_dict = PolygonUtils.generate_polygon_corner_neighbour_dict(mesh_data.convex_polygons)
 		
-	mesh_data.polygon_regions = OrcaUtils.generate_allowed_area_regions(mesh_data.convex_polygons)
+	mesh_data.pos_to_region = setup_pos_to_region()
 	
-	generate_fake_chars()
-	
-	if not mesh_data.pos_to_region:
-		mesh_data.pos_to_region = setup_pos_to_region()
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
 	#mesh_data.occupied_polygons = mesh_data.large_polygons
 	
-	if not mesh_data.corners:
-		var es = generate_corners()
+	var es = generate_corners()
 	
-		var corners = []
+	var corners = []
 	
-		var ps = []
-		for p in $Poly.get_children():
-			var poly = p.polygon
-			ps.append(poly)
+	var ps = []
+	for p in $Poly.get_children():
+		var poly = p.polygon
+		ps.append(poly)
 	
-		for e in es:
-			if e.x > 0 and e.y > 0:
-				if not inside_polygons(e, ps):
-					corners.append(e)
-		mesh_data.corners = corners
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	for e in es:
+		if e.x > 0 and e.y > 0:
+			if not inside_polygons(e, ps):
+				corners.append(e)
+	mesh_data.corners = corners
 		
-	if not mesh_data.edges_to_dist or not mesh_data.edges_to_path:
-		var connections = generate_connections()
-		var graph = Dijstra.generate_graph(mesh_data.corners, connections)	
-		var ds = generate_dists(graph)
-		mesh_data.edges_to_dist = ds[0]
-		mesh_data.edges_to_path = ds[1]
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	var connections = generate_connections()
+	var graph = Dijstra.generate_graph(mesh_data.corners, connections)	
+	var ds = generate_dists(graph)
+	mesh_data.edges_to_dist = ds[0]
+	mesh_data.edges_to_path = ds[1]
 		
-	if not mesh_data.corner_groups:
-		var gs =  generate_position_to_visible_edges()
-		mesh_data.position_to_corner_group_id = gs[0]
-		mesh_data.corner_groups = gs[1]
-		ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+	var gs =  generate_position_to_visible_edges()
+	mesh_data.position_to_corner_group_id = gs[0]
+	mesh_data.corner_groups = gs[1]
+	ResourceSaver.save(mesh_data, "res://mesh_data.tres")
+		
+	# can't be saved because of HalfPlaneClass
+	mesh_data.polygon_regions = OrcaUtils.generate_allowed_area_regions(mesh_data.convex_polygons)
+
+func _ready():
+	
+	setup_mesh_data()
+	
+	generate_fake_chars()
 
 	for fake_char in fake_chars:
 		fake_char["destination"] = Vector2(800, 400)
@@ -475,7 +507,10 @@ func _ready():
 	)
 	
 func set_shortest_path():
+	var new_cycle = cycle % ((len(shortest_paths) + len(shortest_paths_2)) * 4)
 	for i in len(shortest_paths):
+		if not new_cycle == i:
+			continue
 		if not fake_chars[i]["destination"]:
 			continue
 			
@@ -496,6 +531,10 @@ func set_shortest_path():
 		shortest_paths[i] = short_path
 	
 	for i in len(shortest_paths_2):
+		
+		if new_cycle == i + len(shortest_paths):
+			continue
+		
 		if not fake_chars_2[i]["destination"]:
 			continue
 			
@@ -536,10 +575,14 @@ func _input(event):
 					)
 					shortest_paths_2[i] = short_path 
 		
-		
+
+
 func _physics_process(delta):
 	queue_redraw()
+	
 	set_shortest_path()
+	
+	cycle += 1
 	
 	for i in range(len(fake_chars)):
 		var f_c = fake_chars[i]
@@ -577,16 +620,16 @@ func _draw():
 			draw_line(p1, p2, color, size)
 
 			
-	for j in fake_chars.size():
-		var pth = shortest_paths[j]
-		var pos = fake_chars[j]["position"]
-		if not pth:
-			continue
-		var color = Color.GRAY
-		color.a = 0.2
-		draw_line(pos, pth[0], color, 3) 
-		for i in pth.size() - 1:
-			draw_line(pth[i], pth[i+1], color, 3)
+	#for j in fake_chars.size():
+	#	var pth = shortest_paths[j]
+	#	var pos = fake_chars[j]["position"]
+	#	if not pth:
+	#		continue
+	#	var color = Color.GRAY
+	#	color.a = 0.2
+	#	draw_line(pos, pth[0], color, 3) 
+	#	for i in pth.size() - 1:
+	#		draw_line(pth[i], pth[i+1], color, 3)
 	
 	for corner in mesh_data.corners:
 		draw_circle(corner, 3, Color.AZURE)
@@ -594,7 +637,7 @@ func _draw():
 	
 	for fake_char in fake_chars:
 		draw_circle(fake_char["position"], 8, Color.NAVY_BLUE)
-		draw_line(fake_char["position"], fake_char["position"] + fake_char["new_velocity"] * 0.3, Color.LIGHT_BLUE, 3 )
+	#	draw_line(fake_char["position"], fake_char["position"] + fake_char["new_velocity"] * 0.3, Color.LIGHT_BLUE, 3 )
 		
 	for fake_char in fake_chars_2:
 		draw_circle(fake_char["position"], 8, Color.RED)
