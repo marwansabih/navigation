@@ -1,0 +1,269 @@
+[gd_scene load_steps=4 format=3 uid="uid://1i868yveyvp6"]
+
+[ext_resource type="Script" path="res://navigation_test.gd" id="1_23kh7"]
+[ext_resource type="Texture2D" uid="uid://bm6p2smgfrelk" path="res://icon.svg" id="2_6nobb"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_xmmqy"]
+source_geometry_group_name = &"navigation_polygon_source_group"
+
+[node name="navigation_test" type="Node2D"]
+script = ExtResource("1_23kh7")
+
+[node name="Polygons" type="NavigationRegion2D" parent="."]
+navigation_polygon = SubResource("NavigationPolygon_xmmqy")
+
+[node name="Polygon2D" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.45098)
+polygon = PackedVector2Array(281, 166, -4, 266, -6, 20, 285, 11)
+
+[node name="Polygon2D3" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.396078)
+polygon = PackedVector2Array(721, 636, 801, 568, 803, 431, 827, 356, 1164, 284, 1159, 622)
+
+[node name="Polygon2D2" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.419608)
+polygon = PackedVector2Array(354, 258, 420, 134, 661, 132, 780, 225, 758, 336, 474, 381)
+
+[node name="Polygon2D4" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.4)
+polygon = PackedVector2Array(793, 26, 872, 126, 1182, 162, 1171, 20)
+
+[node name="Polygon2D5" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.4)
+polygon = PackedVector2Array(-5, 446, 221, 362, 359, 424, 552, 456, 640, 435, 544, 635, -17, 657)
+
+[node name="Actors" type="Node2D" parent="."]
+
+[node name="Actor1" type="Sprite2D" parent="Actors"]
+self_modulate = Color(1, 0.384314, 0.431373, 1)
+position = Vector2(132, 376)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor2" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.870588, 0.521569, 0.0196078, 1)
+position = Vector2(14, 330)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor3" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.176471, 0.619608, 0.0588235, 1)
+position = Vector2(181, 307)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor4" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.282353, 0.34902, 0.729412, 1)
+position = Vector2(54, 298)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor5" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.215686, 0.521569, 0.607843, 1)
+position = Vector2(34, 310)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor6" type="Sprite2D" parent="Actors"]
+modulate = Color(1, 0.0666667, 0.388235, 1)
+position = Vector2(106, 271)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor7" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.937255, 0.882353, 0.0901961, 1)
+position = Vector2(146, 312)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor8" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.0823529, 0.129412, 0.121569, 1)
+position = Vector2(91, 330)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor9" type="Sprite2D" parent="Actors"]
+self_modulate = Color(1, 0.384314, 0.431373, 1)
+position = Vector2(128, 312)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor10" type="Sprite2D" parent="Actors"]
+self_modulate = Color(1, 0.384314, 0.431373, 1)
+position = Vector2(132, 286)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor11" type="Sprite2D" parent="Actors"]
+self_modulate = Color(1, 0.384314, 0.431373, 1)
+position = Vector2(130, 337)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor12" type="Sprite2D" parent="Actors"]
+self_modulate = Color(1, 0.384314, 0.431373, 1)
+position = Vector2(140, 260)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor13" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.282353, 0.34902, 0.729412, 1)
+position = Vector2(66, 333)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor14" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.176471, 0.619608, 0.0588235, 1)
+position = Vector2(181, 266)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor15" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.176471, 0.619608, 0.0588235, 1)
+position = Vector2(206, 298)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor16" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.176471, 0.619608, 0.0588235, 1)
+position = Vector2(179, 340)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor17" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.176471, 0.619608, 0.0588235, 1)
+position = Vector2(185, 286)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor18" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.0823529, 0.129412, 0.121569, 1)
+position = Vector2(95, 355)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor19" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.0823529, 0.129412, 0.121569, 1)
+position = Vector2(78, 283)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor20" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.0823529, 0.129412, 0.121569, 1)
+position = Vector2(78, 308)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor21" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.282353, 0.34902, 0.729412, 1)
+position = Vector2(57, 315)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor22" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.282353, 0.34902, 0.729412, 1)
+position = Vector2(59, 278)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor23" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.282353, 0.34902, 0.729412, 1)
+position = Vector2(73, 355)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor24" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.937255, 0.882353, 0.0901961, 1)
+position = Vector2(152, 333)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor25" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.937255, 0.882353, 0.0901961, 1)
+position = Vector2(158, 294)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor26" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.937255, 0.882353, 0.0901961, 1)
+position = Vector2(158, 266)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor27" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.937255, 0.882353, 0.0901961, 1)
+position = Vector2(159, 354)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor28" type="Sprite2D" parent="Actors"]
+modulate = Color(1, 0.0666667, 0.388235, 1)
+position = Vector2(111, 352)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor29" type="Sprite2D" parent="Actors"]
+modulate = Color(1, 0.0666667, 0.388235, 1)
+position = Vector2(119, 251)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor30" type="Sprite2D" parent="Actors"]
+modulate = Color(1, 0.0666667, 0.388235, 1)
+position = Vector2(105, 297)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor31" type="Sprite2D" parent="Actors"]
+modulate = Color(1, 0.0666667, 0.388235, 1)
+position = Vector2(106, 328)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor32" type="Sprite2D" parent="Actors"]
+self_modulate = Color(1, 0.384314, 0.431373, 1)
+position = Vector2(133, 356)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor33" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.215686, 0.521569, 0.607843, 1)
+position = Vector2(39, 290)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor34" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.215686, 0.521569, 0.607843, 1)
+position = Vector2(55, 369)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor35" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.215686, 0.521569, 0.607843, 1)
+position = Vector2(48, 341)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor36" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.870588, 0.521569, 0.0196078, 1)
+position = Vector2(33, 373)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor37" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.870588, 0.521569, 0.0196078, 1)
+position = Vector2(28, 350)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor38" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.870588, 0.521569, 0.0196078, 1)
+position = Vector2(15, 310)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")
+
+[node name="Actor39" type="Sprite2D" parent="Actors"]
+self_modulate = Color(0.870588, 0.521569, 0.0196078, 1)
+position = Vector2(18, 291)
+scale = Vector2(0.109375, 0.101562)
+texture = ExtResource("2_6nobb")

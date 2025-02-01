@@ -221,13 +221,11 @@ static func intersection_exists(
 
 static func interset_with_shape(shape: Array, p: Vector2,q: Vector2):
 	var n = len(shape)
-	for i in range(n-1):
+	for i in range(n):
 		var s1 = shape[i]
-		var s2 = shape[i+1]
+		var s2 = shape[(i+1) % n]
 		if intersection_exists(s1, s2, p, q):
 			return true
-	if intersection_exists(shape[0], shape[n-1], p, q):
-		return true
 	return false
 	
 static func isometric_distance(p,q):

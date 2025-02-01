@@ -17,15 +17,15 @@ static func generate_grid_position_to_walls(
 	grid_size,
 	polygons
 ):
-	var x = int(dim_x / grid_size) + 1
-	var y = int(dim_y / grid_size) + 1
+	var x = int(dim_x / grid_size) + 2
+	var y = int(dim_y / grid_size) + 2
 	var grid_position_to_walls = {}
 	for k in x:
 		grid_position_to_walls[k] = {}
 		for l in y:
-			var x1 = k * grid_size
+			var x1 = (k-1) * grid_size
 			var x2 = x1 + grid_size
-			var y1 = l * grid_size
+			var y1 = (l-1) * grid_size
 			var y2 = y1 + grid_size
 			var walls = _get_walls_in_range(
 				polygons,
@@ -135,47 +135,18 @@ static func _intersection_with_line(
 	if min_y <= y2 and y2 <= max_y:
 		return true
 		
-	var x1 =  (min_y - p1.y) /m + p1.x
+	var x1 =  p1.x + (min_y - p1.y) /m 
 	
 	if min_x <= x1 and x1 <= max_x:
 		return true
 	
-	var x2 =  (max_y - p1.y) /m + p1.x
+	var x2 = p1.x + (max_y - p1.y) /m
 	
 	if min_x <= x2 and x2 <= max_x:
 		return true
 		
 	return false
 	
-	#var delta_x = max_x - min_x
-	#var delta_y = max_y - min_y
-	
-	#p_min_x -= delta_x
-	#p_max_x += delta_x
-	#p_min_y -= delta_y
-	#p_max_y += delta_y 
-	
-	#if p_min_x > max_x:
-	#	return false
-	#if p_max_x < min_x:
-	#	return false
-	#if p_min_y > max_y:
-	#	return false
-	#if p_max_y < min_y:
-	#	return false
-	
-	var dir = (p1 - p2).rotated(PI/2)
-	
-	var scalar_1 = dir.x * (p1.x - min_x) + dir.y * (p1.y - min_y)
-	var scalar_2 = dir.x * (p1.x - min_x) + dir.y * (p1.y - max_y)
-	var scalar_3 = dir.x * (p1.x - max_x) + dir.y * (p1.y - max_y)
-	var scalar_4 = dir.x * (p1.x - max_x) + dir.y * (p1.y - min_y)
-	
-	if scalar_1 < 0 and scalar_2 < 0 and scalar_3 < 0 and scalar_4 < 0:
-		return false
-	if scalar_1 > 0 and scalar_2 > 0 and scalar_3 > 0 and scalar_4 > 0:
-		return false
-	return true
 	
 static func _get_polygons_in_range(
 	polygons,

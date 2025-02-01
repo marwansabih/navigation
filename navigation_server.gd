@@ -129,7 +129,7 @@ func shortest_path_between_positions(
 	#dirty but fast
 	var criterea_3 = intersect_with_occupied_polygons(p1, p2)
 	
-	if criterea_3:
+	if not criterea_3:
 		return [p2]
 	
 	#if not criterea_1 and not criterea_2 and not criterea_3:
@@ -185,9 +185,9 @@ func intersect_with_obstacle_box(obstacle_box, p, q):
 	if p.y < x_min and q.x < x_min:
 		return false
 	var p_in_x_range = x_min <= p.x and p.x <= x_max
-	var p_in_y_range = y_min <= p.y and p.y in y_max
+	var p_in_y_range = y_min <= p.y and p.y <= y_max
 	var q_in_x_range = x_min <= q.x and q.x <= x_max
-	var q_in_y_range = y_min <= q.y and q.y in y_max
+	var q_in_y_range = y_min <= q.y and q.y <= y_max
 	if p_in_x_range and p_in_y_range:
 		return true
 	if q_in_x_range and q_in_y_range:
@@ -200,16 +200,16 @@ func intersect_with_obstacle_box(obstacle_box, p, q):
 	return true
 
 func intersect_with_occupied_polygons(p,q):
-	
 	for i in mesh_data.occupied_polygons.size():
 		var obstacle_box = mesh_data.obstacle_boxes[i]
-		if not intersect_with_obstacle_box(obstacle_box, p, q):
-			continue
+		#if not intersect_with_obstacle_box(obstacle_box, p, q):
+		#	continue
 		var polygon = mesh_data.occupied_polygons[i]
+		print(polygon)
 		var dir = (q-p).normalized().rotated(PI/2)
 		var critera_1 = GeometryUtils.interset_with_shape(polygon, p + 8 * dir,q + 8 * dir )
 		var critera_2 = GeometryUtils.interset_with_shape(polygon, p - 8 * dir,q - 8 * dir )
-		if GeometryUtils.interset_with_shape(polygon, p,q) and critera_1 and critera_2:
+		if GeometryUtils.interset_with_shape(polygon, p,q) or critera_1 or critera_2:
 			return true
 	return false
 

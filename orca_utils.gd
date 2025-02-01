@@ -932,6 +932,17 @@ static func set_velocity(
 	
 	agent["last_region_idx"] = found_region_idx 
 	
+static func get_close_walls(
+	pos: Vector2,
+	grid_position_to_walls
+):
+	var grid_pos = PolygonUtils.position_to_grid_position(
+		pos,
+		32
+	)
+	var walls = grid_position_to_walls[int(grid_pos.x)][int(grid_pos.y)]
+	return walls
+	
 static func in_wall_range(
 	pos: Vector2,
 	grid_position_to_walls
@@ -940,16 +951,23 @@ static func in_wall_range(
 		pos,
 		32
 	)
-	print(grid_pos)
-	var walls = grid_position_to_walls[int(grid_pos.x)][int(grid_pos.y)]
+	#print(grid_pos)
+	var walls = get_close_walls(
+		pos,
+		grid_position_to_walls
+	)
+	var close_wall = false
 	for wall in walls:
+		
+		if pos.distance_to(wall[0]) < 16:
+			return true
+		if pos.distance_to(wall[1]) < 16:
+			return true
+		
 		var w_p = GeometryUtils.get_closest_point_on_line(
 			wall[0],
 			wall[1],
 			pos
-		)
-		var dist = pos.distance_to(
-			w_p
 		)
 		var dist_to_p = wall[0].distance_to(
 			w_p
@@ -963,15 +981,20 @@ static func in_wall_range(
 			wall[1]
 		)
 		
-		if dist_to_p > wall_length:
-			return false
-		if dist_to_p2 > wall_length:
-			return false
 		
-		if dist < 32:
+		if dist_to_p > wall_length:
+			continue
+		if dist_to_p2 > wall_length:
+			continue
+		
+		var dist = pos.distance_to(
+			w_p
+		)
+		
+		if dist < 16:
 			return true
 	
-	return false
+	return close_wall
 	
 	
 static func set_velocity_2(

@@ -6,10 +6,10 @@ var navigation_server : NavigationServer
 func _ready():
 	
 	var p = PolygonUtils._intersection_with_line(
-		Vector2( 5, 0.5),
-		Vector2( -5, 0.6),
+		Vector2( 10, 1.0),
+		Vector2( 0.0, -0.5),
 		0,
-		1,
+		3.35,
 		0,
 		1
 	)
@@ -62,12 +62,11 @@ func _input(event):
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	pass
+	queue_redraw()
 	#queue_redraw()
 	
 func _physics_process(delta):
 	navigation_server._physics_process(delta)
-	queue_redraw()
 	
 func _draw():
 	var mesh_data : MeshData = navigation_server.mesh_data
@@ -94,25 +93,7 @@ func _draw():
 			var size = 6
 			draw_line(p1, p2, color, size)
 	
-	
-	for agent_id in navigation_server.agent_id_to_agent_data:
-		var agent_data = navigation_server.agent_id_to_agent_data[agent_id]
-		var pos = agent_data["agent"].position
-		var path = agent_data["shortest_path"]
-		print(len(path))
-		if not path:
-			continue
-		draw_line(pos, path[0], Color.BLUE)
-		var in_range = OrcaUtils.in_wall_range(
-			pos,
-			mesh_data.grid_position_to_walls
-		)
-		if in_range:
-			draw_circle(
-				pos,
-				16,
-				Color.RED
-			)
+
 	
 	for x in mesh_data.grid_position_to_walls:
 		for y in mesh_data.grid_position_to_walls[x]:
@@ -142,3 +123,51 @@ func _draw():
 					r_color,
 					10					
 				)
+				
+	for agent_id in navigation_server.agent_id_to_agent_data:
+		var agent_data = navigation_server.agent_id_to_agent_data[agent_id]
+		var pos = agent_data["agent"].position
+		var path = agent_data["shortest_path"]
+		print(pos)
+		
+		var walls = OrcaUtils.get_close_walls(
+			pos,
+			mesh_data.grid_position_to_walls
+		)
+		
+		if walls == []:
+			print("no walls found")
+		#print(walls)
+		
+		for wall in walls:
+			draw_line(
+				wall[0],
+				wall[1],
+				Color.RED,
+				4
+			)
+			var w_p = GeometryUtils.get_closest_point_on_line(
+				wall[0],
+				wall[1],
+				pos
+			)
+			draw_circle(
+				w_p,
+				5,
+				Color.BLACK
+			)
+		
+		var in_range = OrcaUtils.in_wall_range(
+			pos,
+			mesh_data.grid_position_to_walls
+		)
+		if in_range:
+			draw_circle(
+				pos,
+				16,
+				Color.RED
+			)
+		
+		if not path:
+			continue
+		draw_line(pos, path[0], Color.BLUE)

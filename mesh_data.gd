@@ -43,11 +43,15 @@ func setup_mesh_data(
 		polygon_neighbours_dict = mesh_data.polygon_neighbours_dict
 		polygon_corner_neighbour_dict = mesh_data.polygon_corner_neighbour_dict
 		
+		setup_polygons(obstacle_region) 
+		
 		var polys = setup_large_polygons()
 		occupied_polygons = polys[0]
+		print("first occupied  polys")
+		print(occupied_polygons)
 		var large_polygons = polys[1]
 		
-		setup_obstacle_boxes(occupied_polygons)
+		setup_obstacle_boxes()
 		
 		#obstacle_boxes = mesh_data.obstacle_boxes
 		pos_to_region = mesh_data.pos_to_region
@@ -107,7 +111,7 @@ func setup_mesh_data(
 	
 	print("Occupied polygons and large polygons were setup")
 	
-	setup_obstacle_boxes(large_polygons)
+	setup_obstacle_boxes()
 	
 	print("Obstacle boxes setup")	
 	
@@ -188,9 +192,9 @@ func setup_large_polygons():
 	large_polygons = PolygonUtils.order_clockwise(large_polygons)
 	return [occupied_polygons, large_polygons]
 	
-func setup_obstacle_boxes(large_polygons):
+func setup_obstacle_boxes():
 	
-	for polygon in large_polygons:
+	for polygon in occupied_polygons:
 		var min_x = INF
 		var max_x = -INF
 		var min_y = INF
