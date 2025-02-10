@@ -16,6 +16,7 @@ class_name MeshData
 @export var obstacle_map = {}
 @export var grid_position_to_walls = {}
 @export var obstacles = []
+@export var edge_boxes = []
 
 var dim_x
 var dim_y
@@ -50,6 +51,12 @@ func setup_mesh_data(
 		print("first occupied  polys")
 		print(occupied_polygons)
 		var large_polygons = polys[1]
+		print("large polygons")
+		print(large_polygons)
+		
+		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
+			large_polygons
+		)
 		
 		setup_obstacle_boxes()
 		
@@ -315,10 +322,15 @@ func generate_position_to_visible_edges():
 	var position_to_visible_corner_ids = {}
 	
 	
+	var nr_corners = corners.size()
+	
+	
 	var shadow_polygons = []
 	for edge in corners:
 		var polys = generate_shadow_polygons(edge)
 		shadow_polygons.append(polys)
+		
+	var nr_
 		
 	for i in range(dim_x):
 		for j in range(dim_y):

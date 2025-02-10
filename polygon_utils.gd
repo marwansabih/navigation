@@ -2,6 +2,123 @@ extends Node
 
 class_name PolygonUtils
 
+static func sort_first_by_x_then_by_y(box_1, box_2):
+	var p1 = box_1[0]
+	var p2 = box_2[0]
+	if p1.x < p2.x:
+		return true
+	if p1.x == p2.x and p1.y < p2.y:
+		return true
+	return false
+
+static func generate_polygon_edge_boxes(polygons):
+	var edge_boxes = []
+	for polygon in polygons:
+		var nr_points = polygon.size() 
+		for i in nr_points:
+			var next_i = (i + 1) % nr_points
+			var p1 = polygon[i]
+			var p2 = polygon[next_i]
+			if p1.x < p2.x:
+				edge_boxes.append(
+					[p1,p2]
+				)
+				continue
+			if p1.x == p2.x and p1.y < p2.y:
+				edge_boxes.append(
+					[p1,p2]
+				)
+				continue
+			edge_boxes.append([p2, p1])
+	
+	edge_boxes.sort_custom(
+		PolygonUtils.sort_first_by_x_then_by_y
+	)
+	return edge_boxes
+
+static func cuts_edge_boxs(
+	l1: Vector2,
+	l2: Vector2,
+	edge_boxes
+):
+	var left_p = l1 if l1.x <= l2.x else l2
+	var right_p = l1 if l1.x > l2.x else l2
+	var nr_boxes = edge_boxes.size()
+	for box in edge_boxes:
+		# boxes are sorted from left to right
+		# maybe use tree for fast look up
+
+		#Since boxes are sorted
+		#no box to the right of the line 
+		#can intersect
+		if right_p.x < box[0].x:
+			return false
+		if left_p.x > box[1].x:
+			continue 
+			
+		var min_y = box[0].y if box[0].y < box[1].y else box[1].y
+		
+		if right_p.y < min_y and left_p.y < min_y:
+			continue
+		
+		var max_y = box[0].y if box[0].y > box[1].y else box[1].y
+		
+		if right_p.y > max_y and left_p.y > max_y:
+			continue
+		
+		var intersection = GeometryUtils.intersection_exists(
+			right_p,
+			left_p,
+			box[0],
+			box[1]
+		)
+		
+		if intersection:
+			return true
+			
+	return false
+		
+		
+		
+	
+
+static func get_y_intersection_in_polygon(x, polygon):
+	
+	var found_ys = []
+	for i in polygon.size():
+		var next_i = (i + 1) % (polygon.size())
+		var p1 = polygon[i]
+		var p2 = polygon[next_i]
+		var min_x = p1.x if p1.x < p2.x else p2.x
+		var max_x = p1.x if p1.x > p2.x else p2.x
+		if min_x > x or max_x < x:
+			continue
+		var m = (p2.y - p1.y)/(p2.x - p1.x)
+		var y = p1.y + m * (x - p1.x )
+		found_ys.append(y)
+	found_ys.sort()
+	var intervalls = []
+	if intervalls.size() == 1:
+		return [found_ys]
+	for i in found_ys.size() - 1:
+		var y_down = found_ys[i]
+		var y_up = found_ys[i+1]
+		if in_polygon(
+			polygon,
+			Vector2(x, (y_up + y_down)/2)
+		):
+			intervalls.append([y_down, y_up])
+	return intervalls
+	
+static func generate_forbidden_y_zones(large_polygons):
+	var y_zones = []
+	for polygon in large_polygons:
+		for point in polygon:
+			var x = point.x
+			var intervalls = get_y_intersection_in_polygon(x, polygon)
+			y_zones.append([x, intervalls])
+	return y_zones
+
 static func position_to_grid_position(
 	pos: Vector2,
 	grid_size: int

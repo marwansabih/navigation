@@ -45,12 +45,13 @@ func set_agent_destination(
 ):
 	var agent_id = agent.get_instance_id()
 	agent_id_to_agent_data[agent_id]["destination"] = destination
+	set_shortest_path(false)
 
 var cycle = 0
 func _physics_process(delta):
 	#print(cycle)
 	cycle += 1
-	set_shortest_path()
+	set_shortest_path(true)
 	
 	OrcaUtils.set_velocities_2(
 		agent_id_to_agent_data,
@@ -64,12 +65,12 @@ func _physics_process(delta):
 	move_actors(delta)
 	
 
-func set_shortest_path():
+func set_shortest_path(forced):
 	var new_cycle = cycle % (agent_id_to_agent_data.size() * 4)
 	
 	for agent_id in agent_id_to_agent_data:
 		var agent_data = agent_id_to_agent_data[agent_id]
-		if not new_cycle == agent_data["idx"] and cycle > 10:
+		if not new_cycle == agent_data["idx"] and cycle > 10 and not forced:
 			continue
 		if not agent_data["destination"]:
 			continue
@@ -97,6 +98,8 @@ func shortest_path_between_positions(
 	p1: Vector2,
 	p2: Vector2
 ):
+	
+	"""
 	var dir = p2 - p1
 	
 	var region_idx = -1
@@ -119,13 +122,22 @@ func shortest_path_between_positions(
 	for wall_idx in mesh_data.polygon_neighbours_dict[region_idx]:
 		if mesh_data.polygon_neighbours_dict[region_idx][wall_idx] == neighbour_idx:
 			return [p2]
-		
-			
+	"""	
+	
+	
+	if not PolygonUtils.cuts_edge_boxs(
+		p1,
+		p2,
+		mesh_data.edge_boxes
+	):
+		return [p2]
+	
+	"""
 	
 	var d = dir.rotated(PI/2).normalized()
 	
-	var criterea_1 = intersect_with_occupied_polygons(p1 + d * 12, p2 + d*9)
-	var criterea_2 = intersect_with_occupied_polygons(p1 - d * 12, p2 - d*9)
+	#var criterea_1 = intersect_with_occupied_polygons(p1 + d * 12, p2 + d*9)
+	#var criterea_2 = intersect_with_occupied_polygons(p1 - d * 12, p2 - d*9)
 	#dirty but fast
 	var criterea_3 = intersect_with_occupied_polygons(p1, p2)
 	
@@ -134,7 +146,7 @@ func shortest_path_between_positions(
 	
 	#if not criterea_1 and not criterea_2 and not criterea_3:
 	#	return [p2]
-	
+	"""
 	
 	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
 	var p2_m = GeometryUtils.get_closest_mesh_position(p2, mesh_grid_size)
@@ -205,7 +217,6 @@ func intersect_with_occupied_polygons(p,q):
 		#if not intersect_with_obstacle_box(obstacle_box, p, q):
 		#	continue
 		var polygon = mesh_data.occupied_polygons[i]
-		print(polygon)
 		var dir = (q-p).normalized().rotated(PI/2)
 		var critera_1 = GeometryUtils.interset_with_shape(polygon, p + 8 * dir,q + 8 * dir )
 		var critera_2 = GeometryUtils.interset_with_shape(polygon, p - 8 * dir,q - 8 * dir )
