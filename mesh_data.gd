@@ -50,12 +50,12 @@ func setup_mesh_data(
 		occupied_polygons = polys[0]
 		print("first occupied  polys")
 		print(occupied_polygons)
-		var large_polygons = polys[1]
+		var large_polygons = polys[0]
 		print("large polygons")
 		print(large_polygons)
 		
 		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
-			large_polygons
+			occupied_polygons
 		)
 		
 		setup_obstacle_boxes()
@@ -190,9 +190,9 @@ func setup_large_polygons():
 	var large_polygons = []
 	var occupied_polygons = []
 	for p in polygons:
-		var poly = generate_polygon_edges(p, 8)
+		var poly = expand_polygon(p, 8)
 		large_polygons.append(poly)
-		var poly_2 = generate_polygon_edges(p, 19)
+		var poly_2 = expand_polygon(p, 19)
 		occupied_polygons.append(poly)
 		
 	occupied_polygons = PolygonUtils.order_clockwise(occupied_polygons)
@@ -219,7 +219,7 @@ func setup_obstacle_boxes():
 			[min_x, max_x, min_y, max_y]
 		)
 
-func generate_polygon_edges(polygon, corner_distance):
+func expand_polygon(polygon, corner_distance):
 	var p = polygon
 	var size = len(p)
 	var p_index = size - 1
@@ -279,7 +279,7 @@ func inside_polygons(p, polys):
 func generate_corners():
 	var corners = []
 	for polygon in polygons:
-		corners.append_array(generate_polygon_edges(polygon, 19))
+		corners.append_array(expand_polygon(polygon, 19))
 	return corners
 
 func generate_connections():

@@ -11,9 +11,9 @@ static func sort_first_by_x_then_by_y(box_1, box_2):
 		return true
 	return false
 
-static func generate_polygon_edge_boxes(polygons):
+static func generate_polygon_edge_boxes(large_polygons):
 	var edge_boxes = []
-	for polygon in polygons:
+	for polygon in large_polygons:
 		var nr_points = polygon.size() 
 		for i in nr_points:
 			var next_i = (i + 1) % nr_points

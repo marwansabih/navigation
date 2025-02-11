@@ -2,7 +2,7 @@ extends Node2D
 
 var navigation_server : NavigationServer
 
-var edge_boxes
+#var edge_boxes
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
@@ -11,7 +11,7 @@ func _ready():
 	navigation_server.setup_mesh_data($Polygons, "test_map")
 
 	var l_polygons = navigation_server.mesh_data.obstacles
-	edge_boxes = PolygonUtils.generate_polygon_edge_boxes(l_polygons)
+	#edge_boxes = PolygonUtils.generate_polygon_edge_boxes(l_polygons)
 
 
 	for actor in $Actors.get_children():
@@ -66,14 +66,23 @@ func _draw():
 			var color = Color.VIOLET
 			var size = 6
 			draw_line(p1, p2, color, size)
+	
+	for h in mesh_data.occupied_polygons.size():
+		var poly = mesh_data.occupied_polygons[h]
+		for i in poly.size():
+			var p1 = poly[i]
+			var p2 = poly[(i+1) % poly.size()]
+			var color = Color.WHITE
+			var size = 6
+			draw_line(p1, p2, color, size)
 
 
-	for box in edge_boxes:
+	for box in mesh_data.edge_boxes:
 		draw_line(
 			box[0],
 			box[1],
-			Color.GREEN,
-			10
+			Color.BLUE,
+			5
 		)
 		
 	var l1 = Vector2(300,200)
@@ -81,7 +90,7 @@ func _draw():
 	if PolygonUtils.cuts_edge_boxs(
 		l1,
 		l2,
-		edge_boxes
+		mesh_data.edge_boxes
 	):
 		draw_line(
 			l1,
