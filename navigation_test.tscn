@@ -272,25 +272,25 @@ texture = ExtResource("2_6nobb")
 
 [node name="Actor1" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(859, 215)
+position = Vector2(819, 167)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor2" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(856, 247)
+position = Vector2(1003, 243)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor3" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(904, 233)
+position = Vector2(704, 104)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor4" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(888, 212)
+position = Vector2(1038, 177)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
@@ -302,7 +302,7 @@ texture = ExtResource("2_6nobb")
 
 [node name="Actor6" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(889, 269)
+position = Vector2(837, 327)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
@@ -314,37 +314,37 @@ texture = ExtResource("2_6nobb")
 
 [node name="Actor8" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(831, 233)
+position = Vector2(774, 119)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor9" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(935, 212)
+position = Vector2(1082, 269)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor10" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(920, 262)
+position = Vector2(921, 284)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor11" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(941, 237)
+position = Vector2(759, 383)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor12" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(970, 220)
+position = Vector2(1050, 216)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor13" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(951, 264)
+position = Vector2(1006, 298)
 scale = Vector2(0.109375, 0.101562)
 texture = ExtResource("2_6nobb")
 

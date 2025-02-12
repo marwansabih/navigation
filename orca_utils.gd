@@ -3,9 +3,6 @@ class_name OrcaUtils
 extends Node
 
 
-static func generate_normales_of_polyogn():
-	pass
-
 
 static func get_normal_inside_polygon(polygon : Array, mid_point: Vector2, normal: Vector2):
 	var factor = 1
@@ -60,108 +57,6 @@ static func outside_normal(l1: Vector2, l2: Vector2, point: Vector2):
 	var dir = l1.direction_to(l2)
 	var p = l2 - point
 	return (p - dir.dot(p)*dir).normalized()
-
-static func closest_point_on_vo_boundary(
-	p1 : Vector2,
-	p2 : Vector2,
-	rA: float,
-	rB: float,
-	tau: float,
-	opt_v
-):
-	var m1 = (p2 - p1)/float(tau)
-	var m2 = p2 - p1
-	#var m3 = m2 + (m1 - m2) / 2
-	
-	var r1 = float(rA + rB) / tau
-	var r2 = rA + rB
-	
-	var r3 = (r1 + r2) / 2
-	
-	var x = r1**2/(2*r3)
-	var y = r1 * sqrt(1-r1**2/(4*r3**2))
-	var dir = m2.direction_to(m1)
-	var dir_rot_90 = dir.rotated(PI/2)
-
-	var c1 = m2 + dir * x + dir_rot_90 * y
-	var c2 = m2 + dir * x - dir_rot_90 * y
-	var dir_out = 	(dir * x + dir_rot_90 * y).normalized()
-	var dir_out_2 = (dir * x - dir_rot_90 * y).normalized()
-	var s1_up = c1 + (r2-r1) * dir_out
-	var s2_up= m1 + r1 * dir_out
-	var s1_down = c2 + (r2-r1) * dir_out_2
-	var s2_down= m1 + r1 * dir_out_2
-	var m1_out = dir * x + dir_rot_90 * y + r1 * dir_out
-	var m2_out = dir * x - dir_rot_90 * y + r1 * dir_out_2
-	var l_x = abs(m1_out.dot(dir)) + r2
-	var tangent_1 = (s1_up-s2_up).normalized()
-	var m_tangent_1 = (s1_up - s2_up).dot(dir_rot_90)/(s1_up - s2_up).dot(dir)
-	var m_tangent_2 = (s1_down - s2_down).dot(dir_rot_90)/(s1_down - s2_down).dot(dir)
-	var s3_up = s1_up - dir * l_x  - m_tangent_1 * l_x * dir_rot_90
-	var s3_down = s1_down - dir * l_x  - m_tangent_2 * l_x * dir_rot_90
-	var closest_point = Vector2(0,0)
-	
-	var min_dist = INF
-	
-	
-	var circ_dir = GeometryUtils.get_closest_point_on_line(s2_up, s2_down, m1) - m1
-	
-	if (opt_v-s2_up).dot(circ_dir) > 0:
-		var r_dir = m1.direction_to(opt_v)
-		closest_point = m1 + r1 * r_dir
-		var u = closest_point - opt_v
-		var n = m1.direction_to(closest_point)
-		return [m1, m2, r1, r2, s3_up, s2_up, s3_down, s2_down, closest_point, u, n]
-	#if outside_normal(s3_up, s3_down, m1).dot(opt_v-s3_up) >= 0:
-	#	closest_point = GeometryUtils.get_closest_point_on_line(s3_up, s3_down, opt_v)
-	#	if not on_segment(s3_up, s3_down, closest_point):
-	#		closest_point = s3_up
-	#		if s3_up.distance_to(opt_v) > s3_down.distance_to(opt_v):
-	#			closest_point = s3_down
-	#	var n = outside_normal(s3_up, s3_down, m1)
-	#	var u = closest_point - opt_v 
-	#	return [m1, m2, r1, r2, s3_up, s2_up, s3_down, s2_down, closest_point, u, n]
-		
-	var p1_online :Vector2 = GeometryUtils.get_closest_point_on_line(s3_up, s2_up, opt_v)
-	
-	var n = null #= Vector2(0,0)
-	
-	if p1_online.distance_to(opt_v) < min_dist: #and on_segment(s3_up, s2_up, p1_online):
-		closest_point =  p1_online
-		min_dist = p1_online.distance_to(opt_v)
-		n = outside_normal(s3_up, s2_up, m1) 
-	var p2_online = GeometryUtils.get_closest_point_on_line(s3_down, s2_down, opt_v)
-	if p2_online.distance_to(opt_v) < min_dist: #and on_segment(s3_down, s2_down, p2_online):
-		closest_point =  p2_online
-		min_dist = p2_online.distance_to(opt_v)
-		n = outside_normal(s3_down, s2_down, m1) 
-	#var p3_online = GeometryUtils.get_closest_point_on_line(s3_up, s3_down, opt_v)
-	#if p3_online.distance_to(opt_v) < min_dist and on_segment(s3_up, s3_down, p3_online):
-	#	closest_point =  p3_online
-	#	min_dist = p3_online.distance_to(opt_v)
-	#	n = outside_normal(s3_up, s3_down, m1) 
-	
-	#if n == null:
-	#	closest_point = s3_up
-	#	if s3_up.distance_to(opt_v) > s3_down.distance_to(opt_v):
-	#		closest_point = s3_down
-	#	n = outside_normal(s3_up, s3_down, m1) 
-	
-	var u: Vector2 = closest_point - opt_v
-	
-	
-	#var in_circle = Geometry2D.is_point_in_circle(opt_v, m1, r1)
-	#var in_polygon =  Geometry2D.is_point_in_polygon(opt_v,[s2_up, s3_up, s3_down, s1_down])
-	
-	#var inside = in_circle or in_polygon
-	
-	#if not inside:
-	#	n = -n
-	
-	#s3_up = s1_up
-	#s3_down = s1_down
-	
-	return [m1, m2, r1, r2, s3_up, s2_up, s3_down, s2_down, closest_point, u, n]
 
 static func closest_point_on_vo_boundary_2(
 	p1 : Vector2,
@@ -331,15 +226,6 @@ static func left_bounded(half_plane: HalfPlane, org_plane: HalfPlane):
 	elif  angle_2 < angle:
 		return true
 	
-	#if abs(p_dir.dot(org_plane.p_dir)) <= PI/2:
-	#	orientiation_2 = -1 
-	#if orientation * orientiation_2 < 0:
-	#	return true
-	#var dot_p = half_plane.p_dir.dot(org_plane.p_dir)
-	#if dot_p > 0:
-	#	return true
-	#if dot_p == 0:
-	#	return half_plane.p_dir.dot(Vector2(0,1)) > 0
 	return false
 	
 static func right_bounded(half_plane: HalfPlane, org_plane: HalfPlane):
@@ -724,13 +610,17 @@ static func generate_agent_halfplanes(
 		var p2 = other["position"]
 		if "new_velocity" in agent:
 			opt_vel = agent["new_velocity"]
+		
+		var r1 = agent["radius"]
+		var r2 = other["radius"]
+		
 		#opt_other = Vector2(0,0)
 		#opt_other = other["opt_velocity"]
 		var vs = closest_point_on_vo_boundary_2( 
 			p1,
 			p2,
-			8,
-			8,
+			r1,
+			r2,
 			1,
 			opt_vel - opt_other 
 		)
@@ -783,11 +673,16 @@ static func generate_agent_halfplanes_2(
 			opt_vel = agent["new_velocity"]
 		#opt_other = Vector2(0,0)
 		#opt_other = other["opt_velocity"]
+		
+		var r1 = agent["radius"]
+		var r2 = agent["radius"]
+		print(r1)
+		
 		var vs = closest_point_on_vo_boundary_2( 
 			p1,
 			p2,
-			8,
-			8,
+			r1,
+			r2,
 			1,
 			opt_vel - opt_other 
 		)
@@ -869,7 +764,7 @@ static func set_velocity(
 	half_planes.append_array(h_ps)
 	half_planes.append_array(region)
 	
-	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 400)
+	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 	
 	var new_velocity = xs[1]
 	
@@ -899,7 +794,7 @@ static func set_velocity(
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
 		planes.append_array(new_region)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 400)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 		var velocity = vs[1]
 		if velocity == null:
 			continue
@@ -919,7 +814,7 @@ static func set_velocity(
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
 		planes.append_array(new_region)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["dalta_v"])
 		var velocity = vs[1]
 		if velocity == null:
 			continue
@@ -1067,7 +962,7 @@ static func set_velocity_2(
 	if near_wall:
 		half_planes.append_array(region)
 	
-	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, 100)
+	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 	
 	var new_velocity = xs[1]
 	
@@ -1101,7 +996,7 @@ static func set_velocity_2(
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
 		planes.append_array(new_region)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 		var velocity = vs[1]
 		if velocity == null:
 			continue
@@ -1121,7 +1016,7 @@ static func set_velocity_2(
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
 		planes.append_array(new_region)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, 100)
+		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 		var velocity = vs[1]
 		if velocity == null:
 			continue

@@ -15,11 +15,11 @@ func _ready():
 
 
 	for actor in $Actors.get_children():
-		navigation_server.register_agent(actor, 50, 20)
+		navigation_server.register_agent(actor, 50, 20,8)
 		navigation_server.set_agent_destination(actor, Vector2(1079, 264))
 	
 	for actor in $Actors2.get_children():
-		navigation_server.register_agent(actor, 50, 20)
+		navigation_server.register_agent(actor, 50, 20, 16)
 		navigation_server.set_agent_destination(actor, Vector2(300, 264))
 	
 
@@ -112,7 +112,13 @@ func _draw():
 		var path = agent_data["shortest_path"]
 		
 		if path:
-			draw_line(pos, path[0], Color.BLUE)		
+			draw_line(pos, path[0], Color.BLUE)
+			
+		draw_circle(
+			pos,
+			agent_data["radius"],
+			Color.BLACK
+		)		
 		
 		continue
 		print(pos)
@@ -121,8 +127,6 @@ func _draw():
 			pos,
 			mesh_data.grid_position_to_walls
 		)
-
-
 		"""
 		if walls == []:
 			print("no walls found")

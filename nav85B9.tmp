@@ -1,0 +1,40 @@
+[gd_scene load_steps=4 format=3 uid="uid://bff8jicpc3rv"]
+
+[ext_resource type="Script" path="res://navigation_test_2.gd" id="1_aph63"]
+[ext_resource type="Texture2D" uid="uid://bm6p2smgfrelk" path="res://icon.svg" id="2_hvrd6"]
+
+[sub_resource type="NavigationPolygon" id="NavigationPolygon_g0jxl"]
+source_geometry_group_name = &"navigation_polygon_source_group"
+
+[node name="Navigation_test_2" type="Node2D"]
+script = ExtResource("1_aph63")
+
+[node name="Actors" type="Node2D" parent="."]
+
+[node name="Sprite2D" type="Sprite2D" parent="Actors"]
+position = Vector2(169, 473)
+scale = Vector2(0.261719, 0.222656)
+texture = ExtResource("2_hvrd6")
+
+[node name="Polygons" type="NavigationRegion2D" parent="."]
+navigation_polygon = SubResource("NavigationPolygon_g0jxl")
+
+[node name="Polygon1" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.34902)
+polygon = PackedVector2Array(-4, -2, -4, 312, 258, 364, 474, 317, 570, -19)
+
+[node name="Polygon2" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.32549)
+polygon = PackedVector2Array(766, -16, 791, 144, 916, 203, 1204, 172, 1167, -31)
+
+[node name="Polygon3" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.388235)
+polygon = PackedVector2Array(472, 416, 531, 386, 561, 254, 643, 108, 754, 235, 884, 290, 793, 392, 725, 449, 618, 474)
+
+[node name="Polygon4" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.396078)
+polygon = PackedVector2Array(723, 609, 868, 507, 1178, 497, 1158, 666, 716, 684)
+
+[node name="Polygon5" type="Polygon2D" parent="Polygons"]
+color = Color(1, 1, 1, 0.372549)
+polygon = PackedVector2Array(-25, 509, 148, 522, 246, 609, 380, 589, 403, 653, -18, 655)

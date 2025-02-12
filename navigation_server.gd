@@ -24,12 +24,15 @@ func _ready():
 func register_agent(
 	agent,
 	velocity: float,
-	delta_v: float
+	delta_v: float,
+	radius: float
 ):	
 	var agent_id = agent.get_instance_id()
 	var agent_data = {
-		"velocity" = velocity,
 		"agent" = agent,
+		"velocity" = velocity,
+		"delta_v" = delta_v,
+		"radius" = radius,
 		"dir" = null,
 		"org_dir" = Vector2(0,0),
 		"local_path" = null,

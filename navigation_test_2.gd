@@ -37,7 +37,7 @@ func _ready():
 	
 	
 	for actor in $Actors.get_children():
-		navigation_server.register_agent(actor, 50, 20)
+		navigation_server.register_agent(actor, 50, 20, 8)
 		navigation_server.set_agent_destination(actor, Vector2(1079, 264))
 
 
