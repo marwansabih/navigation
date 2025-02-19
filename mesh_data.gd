@@ -18,6 +18,8 @@ class_name MeshData
 @export var obstacles = []
 @export var edge_boxes = []
 
+var current_max_wall_vision = 32
+
 var dim_x
 var dim_y
 
@@ -44,15 +46,18 @@ func setup_mesh_data(
 		polygon_neighbours_dict = mesh_data.polygon_neighbours_dict
 		polygon_corner_neighbour_dict = mesh_data.polygon_corner_neighbour_dict
 		
+		polygon_corner_neighbour_dict = PolygonUtils.generate_polygon_corner_neighbour_dict(convex_polygons)
+	
+		
 		setup_polygons(obstacle_region) 
 		
-		var polys = setup_large_polygons()
-		occupied_polygons = polys[0]
-		print("first occupied  polys")
-		print(occupied_polygons)
-		var large_polygons = polys[0]
-		print("large polygons")
-		print(large_polygons)
+		var pols = setup_large_polygons()
+		occupied_polygons = pols[0]
+		#print("first occupied  polys")
+		#print(occupied_polygons)
+		#var large_polygons = pols[0]
+		#print("large polygons")
+		#print(large_polygons)
 		
 		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
 			occupied_polygons
@@ -66,12 +71,13 @@ func setup_mesh_data(
 		edges_to_dist = mesh_data.edges_to_dist
 		edges_to_path = mesh_data.edges_to_path
 		
-		var rect = obstacle_region.get_viewport().get_visible_rect().size		
-		dim_x = rect.x
-		dim_y = rect.y
+		var rectangle = obstacle_region.get_viewport().get_visible_rect().size		
+		dim_x = rectangle.x
+		dim_y = rectangle.y
 		
 		setup_polygons(obstacle_region)
 		
+		"""
 		PolygonUtils.generate_obstacle_map(
 			polygons,
 			16,
@@ -83,6 +89,7 @@ func setup_mesh_data(
 			dim_y,
 			16
 		)
+		"""
 		
 		obstacles = []
 		
@@ -92,7 +99,7 @@ func setup_mesh_data(
 		grid_position_to_walls = PolygonUtils.generate_grid_position_to_walls(
 			dim_x,
 			dim_y,
-			32,
+			current_max_wall_vision,
 			obstacles
 		)
 		
@@ -176,24 +183,39 @@ func setup_polygons(obstacle_region):
 		polygons.append(obstacle.polygon)
 	polygons = PolygonUtils.order_clockwise(polygons)
 	
-func setup_pos_to_region(dim_x, dim_y):
+func setup_pos_to_region(dimension_x, dimemsion_y):
 	for i in convex_polygons.size():
 		var convex_polygon = convex_polygons[i] 
-		for k in range(dim_x):
-			for l in range(dim_y):
+		for k in range(dimension_x):
+			for l in range(dimemsion_y):
 				var point = Vector2(k, l)
 				if PolygonUtils.in_polygon(convex_polygon, point):
 					pos_to_region[point] = polygon_regions[i]
 	return pos_to_region
 
+func update_grid_position_to_walls(
+	radius,
+	v,
+	delta_v
+):
+	var new_wall_vison = int(radius + (v + delta_v) * 0.04) 
+	if new_wall_vison > current_max_wall_vision:
+		grid_position_to_walls = PolygonUtils.generate_grid_position_to_walls(
+			dim_x,
+			dim_y,
+			new_wall_vison,
+			obstacles
+		)
+		current_max_wall_vision = new_wall_vison
+
 func setup_large_polygons():
 	var large_polygons = []
-	var occupied_polygons = []
+	occupied_polygons = []
 	for p in polygons:
 		var poly = expand_polygon(p, 8)
 		large_polygons.append(poly)
 		var poly_2 = expand_polygon(p, 19)
-		occupied_polygons.append(poly)
+		occupied_polygons.append(poly_2)
 		
 	occupied_polygons = PolygonUtils.order_clockwise(occupied_polygons)
 	large_polygons = PolygonUtils.order_clockwise(large_polygons)
@@ -229,7 +251,7 @@ func expand_polygon(polygon, corner_distance):
 		var n_point = p[(i+1)%size]
 		var point = p[i]
 		var edge = get_edge_point(
-			p,
+			#p,
 			p_point,
 			point,
 			n_point,
@@ -240,7 +262,7 @@ func expand_polygon(polygon, corner_distance):
 	return edge_points
 	
 func get_edge_point(
-	polygon,
+	#polygon,
 	p_point,
 	point,
 	n_point,
@@ -248,7 +270,7 @@ func get_edge_point(
 ):
 	var dir_1: Vector2 = (p_point - point).normalized()
 	var dir_2: Vector2 = (n_point - point).normalized()
-	var signum = 1 
+	#var signum = 1 
 	
 	var to_b = -(dir_1 - dir_1.dot(dir_2)*dir_2).normalized() * corner_distance
 	var to_e =  -(dir_2 - dir_2.dot(dir_1)*dir_1).normalized() * corner_distance
@@ -277,10 +299,10 @@ func inside_polygons(p, polys):
 	return false
 	
 func generate_corners():
-	var corners = []
+	var p_corners = []
 	for polygon in polygons:
-		corners.append_array(expand_polygon(polygon, 19))
-	return corners
+		p_corners.append_array(expand_polygon(polygon, 19))
+	return p_corners
 
 func generate_connections():
 	var connections = []
@@ -305,24 +327,24 @@ func intersect_with_occupied_polygons(p,q):
 	return false
 
 func generate_dists(graph):
-	var edges_to_dist = {}
-	var edges_to_path = {}
+	var edges_to_dist_i = {}
+	var edges_to_path_i = {}
 	var size = len(corners)
 	for i in range(size):
-		edges_to_dist[i] = {}
-		edges_to_path[i] = {}
+		edges_to_dist_i[i] = {}
+		edges_to_path_i[i] = {}
 		for j in range(size):
 			var node = Dijstra.find_shortest_path(graph, graph[i], graph[j])
-			edges_to_dist[i][j] = node["distance"]
-			edges_to_path[i][j] = node["path"]
-	return [edges_to_dist, edges_to_path]
+			edges_to_dist_i[i][j] = node["distance"]
+			edges_to_path_i[i][j] = node["path"]
+	return [edges_to_dist_i, edges_to_path_i]
 
 func generate_position_to_visible_edges():
 	
 	var position_to_visible_corner_ids = {}
 	
 	
-	var nr_corners = corners.size()
+	#var nr_corners = corners.size()
 	
 	
 	var shadow_polygons = []
@@ -330,7 +352,7 @@ func generate_position_to_visible_edges():
 		var polys = generate_shadow_polygons(edge)
 		shadow_polygons.append(polys)
 		
-	var nr_
+	#var nr_
 		
 	for i in range(dim_x):
 		for j in range(dim_y):
@@ -351,25 +373,25 @@ func generate_position_to_visible_edges():
 			position_to_visible_corner_ids[pos] = visible_edges
 			
 	var position_to_visible_corner_group_id = {}
-	var corner_groups = []
+	var l_corner_groups = []
 	
 	for pos in position_to_visible_corner_ids:
-		var corners = position_to_visible_corner_ids[pos]
-		corners.sort()
-		var idx = corner_groups.find(corners, 0)
+		var l_corners = position_to_visible_corner_ids[pos]
+		l_corners.sort()
+		var idx = l_corner_groups.find(l_corners, 0)
 		if idx == -1:
-			position_to_visible_corner_group_id[pos] = len(corner_groups)
-			corner_groups.append(corners)
+			position_to_visible_corner_group_id[pos] = len(l_corner_groups)
+			l_corner_groups.append(l_corners)
 		else:
 			position_to_visible_corner_group_id[pos] = idx
 	
-	return [position_to_visible_corner_group_id, corner_groups]
+	return [position_to_visible_corner_group_id, l_corner_groups]
 	
 func generate_shadow_polygons(point):
 	var shadow_polygons = []
 	for polygon in occupied_polygons:
 		var size = len(polygon)
-		var shadow_polygon = []
+		#var shadow_polygon = []
 		for i in range(size):
 			var next_i = (i + 1) % size
 			var p = polygon[i]

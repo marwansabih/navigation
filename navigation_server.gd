@@ -7,7 +7,7 @@ extends Node
 #TODO Better version of position access in agent_data
 #TODO Fix saving "created halfplanes"
 
-var mesh_data
+var mesh_data : MeshData
 var agent_id_to_agent_data = {}
 var mesh_grid_size = 1
 
@@ -41,6 +41,11 @@ func register_agent(
 	}
 	
 	agent_id_to_agent_data[agent_id] = agent_data
+	mesh_data.update_grid_position_to_walls(
+		radius,
+		velocity,
+		delta_v
+	)
 	
 func set_agent_destination(
 	agent,
@@ -48,7 +53,7 @@ func set_agent_destination(
 ):
 	var agent_id = agent.get_instance_id()
 	agent_id_to_agent_data[agent_id]["destination"] = destination
-	set_shortest_path(false)
+	set_shortest_path(true)
 
 var cycle = 0
 func _physics_process(delta):
@@ -62,8 +67,9 @@ func _physics_process(delta):
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
 		mesh_data.polygon_corner_neighbour_dict,
-		mesh_data.pos_to_region,
-		mesh_data.grid_position_to_walls
+		#mesh_data.pos_to_region,
+		mesh_data.grid_position_to_walls,
+		mesh_data.current_max_wall_vision
 	)
 	move_actors(delta)
 	
@@ -154,8 +160,8 @@ func shortest_path_between_positions(
 	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
 	var p2_m = GeometryUtils.get_closest_mesh_position(p2, mesh_grid_size)
 	
-	var groups = mesh_data.corner_groups
-	var pos_to_corner_group_id = mesh_data.position_to_corner_group_id
+	#var groups = mesh_data.corner_groups
+	#var pos_to_corner_group_id = mesh_data.position_to_corner_group_id
 	
 	
 	var neigh_1 = mesh_data.corner_groups[
@@ -216,7 +222,7 @@ func intersect_with_obstacle_box(obstacle_box, p, q):
 
 func intersect_with_occupied_polygons(p,q):
 	for i in mesh_data.occupied_polygons.size():
-		var obstacle_box = mesh_data.obstacle_boxes[i]
+		#var obstacle_box = mesh_data.obstacle_boxes[i]
 		#if not intersect_with_obstacle_box(obstacle_box, p, q):
 		#	continue
 		var polygon = mesh_data.occupied_polygons[i]
@@ -247,7 +253,6 @@ func move_along_direction(
 	if not path:
 		agent_data["dir"] = null
 		return
-	var dir = agent_data["dir"]
 	var velocity = agent_data["velocity"]
 	var pos = agent_data["agent"].position
 	while path and path[0].distance_to(pos) < 2:

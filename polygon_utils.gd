@@ -43,7 +43,7 @@ static func cuts_edge_boxs(
 ):
 	var left_p = l1 if l1.x <= l2.x else l2
 	var right_p = l1 if l1.x > l2.x else l2
-	var nr_boxes = edge_boxes.size()
+
 	for box in edge_boxes:
 		# boxes are sorted from left to right
 		# maybe use tree for fast look up
@@ -331,6 +331,7 @@ static func get_entry_from_map(
 			min_y = mid_y
 	return entry
 
+"""
 static func generate_obstacle_map(
 	polygons,
 	margin,
@@ -343,7 +344,6 @@ static func generate_obstacle_map(
 	depth
 ):
 	if depth == 0:
-		var previous_key = null
 		var entry = obstacle_dict
 		for key in found_keys:
 			if not key in entry:
@@ -364,13 +364,13 @@ static func generate_obstacle_map(
 	## if depth is even we divide in x otherwise in y direction
 	if depth % 2 == 0:
 		var x_mid = (x_min + x_max) /2 
-		var f_keys = found_keys.duplicate()
-		f_keys.append(0)
+		var fo_keys = found_keys.duplicate()
+		fo_keys.append(0)
 		generate_obstacle_map(
 			polygons,
 			margin,
 			obstacle_dict,
-			f_keys,
+			fo_keys,
 			x_min,
 			x_mid,
 			y_min,
@@ -418,6 +418,7 @@ static func generate_obstacle_map(
 		y_max,
 		depth
 	)
+"""
 
 static func setup_polygon_intervalls(polygon):
 	var x_intervalls = []
@@ -513,11 +514,7 @@ static func generate_polygon_corner_neighbour_dict(polygons: Array):
 			continue
 		polygon_idx_to_corner_to_polygons[i] = {}
 		for j in polygon.size():
-			if j == i:
-				continue
 			var p = polygon[j]
-			if p in polygons[j]:
-				polygon
 			var found_polys = find_polygons_by_corner(
 				polygons,
 				p,
@@ -556,10 +553,6 @@ static func start_from_lowest_point(polygon: Array):
 	
 	
 static func intersects_area(polygon, width, height):
-	var min_y = INF
-	var max_y = -INF
-	var min_x = INF
-	var max_x = -INF
 	
 	for point in polygon:
 		var x = point.x
@@ -651,9 +644,6 @@ static func get_polygon_path_between_intersections(
 	area
 ):
 	var poly_size = polygon.size()
-	var path = polygon.slice((start_idx+1) % poly_size, end_idx +1)
-	var start = polygon[(start_idx+1) % poly_size]
-	var end = polygon[end_idx]
 
 	if not in_polygon(area, polygon[start_idx]):
 		start_idx = (start_idx + 1) % poly_size
@@ -694,22 +684,7 @@ static func get_polygon_path_between_intersections(
 	
 	return segment
 	
-	
-	if end_idx < start_idx:
-		end_idx 
-	if end_idx < start_idx:
-		var segment_1 = polygon.slice((start_idx+1) % poly_size, poly_size)
-		var segment_2 = polygon.slice(0, end_idx + 1)
-		return segment_1
-		#return segment_1 + segment_2
-	var checkpoint = path[0] 
-	if path.size() > 1 :
-		checkpoint = (path[1] - path[0])/2.0
-	if in_polygon(area, checkpoint):
-		return path
-	return path
-	
-static func reshape_area(area: Array, polygon: Array, width, height):
+static func reshape_area(area: Array, polygon: Array):
 	var wall_intersections = []
 	var polygon_intersections = []
 	var intersection_points = []
@@ -744,8 +719,6 @@ static func reshape_area(area: Array, polygon: Array, width, height):
 			polygon_intersections.append(j)
 			intersection_points.append(intersection)
 	
-	
-	var start_idx_polygon = polygon_intersections[0] + 1
 	var new_area = []
 	
 	for i in polygon_intersections.size():
@@ -753,7 +726,6 @@ static func reshape_area(area: Array, polygon: Array, width, height):
 		var next_intersection = intersection_points[(i+1) % intersection_points.size()]
 		var area_index = wall_intersections[i]
 		var next_area_index = wall_intersections[(i+1)% wall_intersections.size()]
-		var follow_area_path = true
 		
 		var intersection_path = get_area_path_between_intersections(
 			area,
@@ -828,14 +800,6 @@ static func add_poylgon_inside_area(area: Array, polygon: Array):
 	return new_area 
 	
 		
-static func insert_into_area(polygon, area, width, height):
-	# If a polygon intersects with area of the border, corresponding parts will be used as new outerline
-	# ohterwise two vertical lines from the lowest point of the polygon will be used to exclude the polygon
-	# from the area
-	
-	if intersects_area(polygon, width, height):
-		pass
-		
 static func smallest_y(polygon):
 	var smallest = INF
 	for p in polygon:
@@ -856,7 +820,7 @@ static func extract_allowed_area(polygons: Array, width, height):
 	
 	for polygon in polygons:
 		if intersects_area(polygon, width, height):
-			allowed_area = reshape_area(allowed_area, polygon, width, height)
+			allowed_area = reshape_area(allowed_area, polygon)
 	for polygon in polygons:
 		if not intersects_area(polygon, width, height):
 			allowed_area = add_poylgon_inside_area(allowed_area, polygon)
@@ -991,8 +955,6 @@ static func split_line_on_height(line: Array, height: float, from_left: bool):
 		var l2 = line[i+1]
 		var upper_point = l1
 		var lower_point = l2
-		var upper_index = i
-		var lower_index = i+1
 		
 		if l1.y < l2.y:
 			upper_point = l2
@@ -1018,32 +980,25 @@ static func split_line_on_height(line: Array, height: float, from_left: bool):
 		
 	return [split_above, split_below]
 	
-	
-
-	
-
-static func split_line(line, split_heights):
-	pass
-	
 
 static func get_indices_heighest_and_loweset_point(polygon):
-	var max = -INF
-	var min = INF
+	var maximum = -INF
+	var minimum = INF
 	var heighest_point
 	var lowest_point
 	for i in polygon.size():
 		var p = polygon[i]
-		if p.y > max:
+		if p.y > maximum:
 			heighest_point = i
-			max = p.y
-		if p.y < min:
+			maximum = p.y
+		if p.y < minimum:
 			lowest_point = i
-			min = p.y
+			minimum = p.y
 	return [heighest_point, lowest_point]
 	
 func split_polygon(polygon, heighest_index, lowest_index):
-	var left_side = []
-	var right_side = []
+	#var left_side = []
+	#var right_side = []
 	var heighest_points = []
 	var lowest_points = []
 	for p in polygon:
@@ -1054,15 +1009,3 @@ func split_polygon(polygon, heighest_index, lowest_index):
 			
 	heighest_points.sort()
 	lowest_points.sort()
-
-static func extract_interior_triangles(polygons, width, height):
-	var heighest_points = []
-	var lowest_points = []
-	for polygon in polygons:
-		var ps = get_indices_heighest_and_loweset_point(polygon)
-		heighest_points.append(ps[0])
-		lowest_points.append(ps[1])
-	
-	var indices = range(polygons.size())
-	
-	indices.sort_custom(func(idx_1, idx_2): return polygons[idx_1][heighest_points[idx_1]].y > polygons[idx_2][heighest_points[idx_2]].y)

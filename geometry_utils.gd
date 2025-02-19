@@ -29,8 +29,8 @@ static func get_intersection(
 		return p1 + t * dir1
 	var numerator = p1.y * dir1.x - p1.x * dir1.y + p2.x * dir1.y - p2.y * dir1.x
 	var denominator = dir1.x * dir2.y - dir2.x * dir1.y
-	var s = numerator / denominator
-	return p2 + s * dir2
+	var f = numerator / denominator
+	return p2 + f * dir2
 
 static func get_closest_point_on_line(
 	l1,
@@ -57,19 +57,19 @@ static func get_time_overlaps(
 	var t = (s*v1.x - p.x)/v2.x
 	var alpha = v1.normalized().angle_to(v2) 
 	var h = 2*radius/sin(alpha)
-	var delta_s = h/v1.length()
+	#var delta_s = h/v1.length()
 	var delta_t = h/v2.length()
 	
 	return p2 + (t + delta_t) * v2
 
 static func get_closest_edge(edges, pos):
-	var min = INF
+	var minimum = INF
 	var found_edge = null
 	for i in range(len(edges)):
 		var dist = edges[i].distance_to(pos)
-		if dist < min:
+		if dist < minimum:
 			found_edge = i
-			min = dist
+			minimum = dist
 	return found_edge
 
 static func in_polygons_range(polygons, radius, pos):
@@ -99,11 +99,6 @@ static func in_polygon_range(polygon, radius, pos):
 		if between_points and in_range:
 			return true
 	return false	
-
-static func enlarge_polyogon(polygon):
-	var size = len(polygon)
-	for i in range(size):
-		var next_idx =  i
 	
 
 static func get_wall_points(line, distance):
@@ -237,9 +232,9 @@ static func get_closest_mesh_position(position, grid_size):
 	var dx = int(position.x) % grid_size
 	var dy = int(position.y) % grid_size
 	if dx > grid_size/2:
-		dx + grid_size
+		dx += grid_size
 	if dy > grid_size/2:
-		dy + grid_size
+		dy += grid_size
 	var x = int(position.x) - dx
 	var y = int(position.y) - dy
 	return Vector2(x,y)

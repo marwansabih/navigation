@@ -10,7 +10,7 @@ func _ready():
 	navigation_server = NavigationServer.new()
 	navigation_server.setup_mesh_data($Polygons, "test_map")
 
-	var l_polygons = navigation_server.mesh_data.obstacles
+	#var l_polygons = navigation_server.mesh_data.obstacles
 	#edge_boxes = PolygonUtils.generate_polygon_edge_boxes(l_polygons)
 
 
@@ -19,7 +19,7 @@ func _ready():
 		navigation_server.set_agent_destination(actor, Vector2(1079, 264))
 	
 	for actor in $Actors2.get_children():
-		navigation_server.register_agent(actor, 50, 20, 16)
+		navigation_server.register_agent(actor, 50, 20, 8)
 		navigation_server.set_agent_destination(actor, Vector2(300, 264))
 	
 
@@ -35,11 +35,12 @@ func _input(event):
 					navigation_server.set_agent_destination(actor, event.position)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
-func _process(delta):
-	queue_redraw()
+#func _process(delta):
+#	queue_redraw()
 	#queue_redraw()
 
 func _physics_process(delta):
+	queue_redraw()
 	navigation_server._physics_process(delta)
 
 func _draw():
@@ -50,7 +51,7 @@ func _draw():
 
 	for h in mesh_data.convex_polygons.size():
 		var poly = mesh_data.convex_polygons[h]
-		var region = mesh_data.polygon_regions[h]
+		#var region = mesh_data.polygon_regions[h]
 		for i in poly.size():
 			var p1 = poly[i]
 			var p2 = poly[(i+1) % poly.size()]
@@ -121,13 +122,12 @@ func _draw():
 		)		
 		
 		continue
-		print(pos)
-
+		"""
 		var walls = OrcaUtils.get_close_walls(
 			pos,
-			mesh_data.grid_position_to_walls
+			mesh_data.grid_position_to_walls,
+			mesh_data.current_max_wall_vision
 		)
-		"""
 		if walls == []:
 			print("no walls found")
 		#print(walls)

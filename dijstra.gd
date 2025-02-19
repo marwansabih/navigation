@@ -56,13 +56,13 @@ static func find_shortest_path(graph, start, goal):
 			if neighbour not in found_nodes:
 				found_nodes.append(neighbour)
 		
-		var dist = INF
+		var distance = INF
 		for found_node in found_nodes:
 			if found_node["visited"]:
 				continue
-			if dist > found_node["dist"]:
+			if distance > found_node["dist"]:
 				current_node = found_node
-				dist = found_node["dist"]
+				distance = found_node["dist"]
 	
 		
 		current_node["visited"] = true
