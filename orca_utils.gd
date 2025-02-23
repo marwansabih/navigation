@@ -629,7 +629,7 @@ static func generate_agent_halfplanes_2(
 	for o in others_all:
 		var o_pos = o["agent"].position
 		var a_pos = agent["agent"].position
-		if o_pos.distance_to(a_pos) < 18:
+		if o_pos.distance_to(a_pos) < agent["radius"] + o["radius"] + 5:
 			others.append(o)
 			
 	var opt_vel = agent["opt_velocity"]
@@ -927,7 +927,7 @@ static func set_velocity_2(
 			break
 	
 	for o in others_all:
-		if o["agent"].position.distance_to(agent["agent"].position) < 10:
+		if o["agent"].position.distance_to(agent["agent"].position) < 200:
 			others.append(o)
 			
 	var opt_vel = agent["opt_velocity"]
