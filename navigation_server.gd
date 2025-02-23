@@ -6,6 +6,8 @@ extends Node
 #TODO Fix problem with convex polygon generation
 #TODO Better version of position access in agent_data
 #TODO Fix saving "created halfplanes"
+#TODO Parameter VertixThreshold
+#TODO Parameter adjustable other agent distance detection maybe
 
 var mesh_data : MeshData
 var agent_id_to_agent_data = {}
@@ -90,6 +92,7 @@ func set_shortest_path(forced):
 		
 		if not short_path and "last_shortest_path" in agent_data:
 			short_path = agent_data["last_shortest_path"]
+			print("here")
 		
 		agent_data["last_shortest_path"] = short_path
 		
@@ -98,6 +101,7 @@ func set_shortest_path(forced):
 			var dist =  pos.distance_to(short_path[0])
 			while len(short_path) > 1 and dist < 3:
 				short_path.pop_front()
+				print("pop")
 				dist = pos.distance_to(short_path[0])
 		
 		agent_data["shortest_path"] = short_path
@@ -155,7 +159,7 @@ func shortest_path_between_positions(
 	)
 	
 	if not cuts_shifted_line_1 and not cuts_shifted_line_2 and not cuts_shifted_line_0:
-		print(true)
+		#print(true)
 		return [p2]
 	
 	"""
@@ -272,6 +276,8 @@ func move_along_direction(
 	
 	var path = agent_data["shortest_path"]
 	print(path)
+	if len(path) > 0:
+		print(path[0].distance_to(agent_data["agent"].position))
 	
 	if not path:
 		agent_data["dir"] = null
@@ -281,7 +287,7 @@ func move_along_direction(
 	var pos = agent_data["agent"].position
 	#print(path)
 	#print(pos)
-	while path and path[0].distance_to(pos) < 2:
+	while path and path[0].distance_to(pos) < 3:
 		path.pop_front()
 	agent_data["shortest_path"] = path
 	if not path:

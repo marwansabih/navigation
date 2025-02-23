@@ -329,7 +329,7 @@ func generate_connections():
 	return connections
 
 func intersect_with_occupied_polygons(p,q):
-	for polygon in occupied_polygons:
+	for polygon in polygons:
 		var dir = (q-p).normalized().rotated(PI/2)
 		var critera_1 = GeometryUtils.interset_with_shape(polygon, p + 8 * dir,q + 8 * dir )
 		var critera_2 = GeometryUtils.interset_with_shape(polygon, p - 8 * dir,q - 8 * dir )
@@ -355,7 +355,7 @@ func generate_position_to_visible_edges():
 	var position_to_visible_corner_ids = {}
 	
 	
-	#var nr_corners = corners.size()
+	##var nr_corners = corners.size()
 	
 	
 	var shadow_polygons = []
@@ -363,7 +363,6 @@ func generate_position_to_visible_edges():
 		var polys = generate_shadow_polygons(edge)
 		shadow_polygons.append(polys)
 		
-	#var nr_
 		
 	for i in range(dim_x):
 		for j in range(dim_y):
@@ -375,8 +374,8 @@ func generate_position_to_visible_edges():
 				var c_edge = corners[k]
 				var d = (c_edge - pos).normalized().rotated(PI/2)
 				
-				var criterea_1 = intersect_with_occupied_polygons(pos + d * 9, c_edge + d*9)
-				var criterea_2 = intersect_with_occupied_polygons(pos - d * 9, c_edge - d*9)
+				var criterea_1 = intersect_with_occupied_polygons(pos + d * 8, c_edge + d*8)
+				var criterea_2 = intersect_with_occupied_polygons(pos - d * 8, c_edge - d*8)
 				var criterea_3 = intersect_with_occupied_polygons(pos, c_edge)
 				if not criterea_1 and not criterea_2 and not criterea_3:
 					visible_edges.append(k)
@@ -400,7 +399,7 @@ func generate_position_to_visible_edges():
 	
 func generate_shadow_polygons(point):
 	var shadow_polygons = []
-	for polygon in occupied_polygons:
+	for polygon in polygons:
 		var size = len(polygon)
 		#var shadow_polygon = []
 		for i in range(size):

@@ -20,7 +20,7 @@ func _ready():
 	#var l_polygons = navigation_server.mesh_data.obstacles
 	#edge_boxes = PolygonUtils.generate_polygon_edge_boxes(l_polygons)
 	
-	navigation_server.setup_mesh_data($Polygons, "test_map_3")
+	navigation_server.setup_mesh_data($Polygons, "test_map_4")
 	
 	var new_data = navigation_server.mesh_data.edges_to_path
 	
@@ -48,7 +48,7 @@ func _ready():
 	
 	for actor in $Actors2.get_children():
 		#break
-		navigation_server.register_agent(actor, 50, 15, 24)
+		navigation_server.register_agent(actor, 50, 15, 12)
 		navigation_server.set_agent_destination(actor, Vector2(300, 264))
 	
 
