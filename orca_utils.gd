@@ -568,7 +568,7 @@ static func generate_agent_halfplanes(
 	var others = []
 	
 	for o in others_all:
-		if o["position"].distance_to(agent["position"]) < 18:
+		if o["position"].distance_to(agent["position"]) < 20:
 			others.append(o)
 			
 	var opt_vel = agent["opt_velocity"]
@@ -649,7 +649,7 @@ static func generate_agent_halfplanes_2(
 		
 		var r1 = agent["radius"]
 		var r2 = agent["radius"]
-		print(r1)
+		#print(r1)
 		
 		var vs = closest_point_on_vo_boundary_2( 
 			p1,
@@ -1187,9 +1187,10 @@ static func set_velocities_2(
 				grid_position_to_walls,
 				wall_vision
 			)
-			if not agent["new_velocity"]:
+			if agent["new_velocity"] == Vector2(0,0):
 				resting_agents.append(i)
 				new_resting_agent = true
+				
 		new_resting_agent = false
 		
 static func determine_tangent_to_circle(c, r: float):

@@ -502,8 +502,7 @@ func _ready():
 		mesh_data.convex_polygons,
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
-		mesh_data.polygon_corner_neighbour_dict,
-		mesh_data.pos_to_region
+		mesh_data.polygon_corner_neighbour_dict
 	)
 	
 func set_shortest_path():
@@ -600,8 +599,7 @@ func _physics_process(delta):
 		mesh_data.convex_polygons,
 		mesh_data.polygon_regions,
 		mesh_data.polygon_neighbours_dict,
-		mesh_data.polygon_corner_neighbour_dict,
-		mesh_data.pos_to_region
+		mesh_data.polygon_corner_neighbour_dict
 	)
 
 		

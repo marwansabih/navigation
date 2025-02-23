@@ -12,6 +12,7 @@ class_name MeshData
 @export var corners = [] 
 @export var edges_to_dist = {}
 @export var edges_to_path = {}
+#@export var vertices_to_path = {}
 @export var obstacle_boxes = []
 @export var obstacle_map = {}
 @export var grid_position_to_walls = {}
@@ -52,18 +53,22 @@ func setup_mesh_data(
 		setup_polygons(obstacle_region) 
 		
 		var pols = setup_large_polygons()
-		occupied_polygons = pols[0]
+		occupied_polygons = polygons
 		#print("first occupied  polys")
 		#print(occupied_polygons)
 		#var large_polygons = pols[0]
 		#print("large polygons")
 		#print(large_polygons)
 		
-		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
-			occupied_polygons
+		var large_polygons = expand_polygons(
+			16
 		)
 		
-		setup_obstacle_boxes()
+		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
+			large_polygons
+		)
+		
+		setup_obstacle_boxes(large_polygons)
 		
 		#obstacle_boxes = mesh_data.obstacle_boxes
 		pos_to_region = mesh_data.pos_to_region
@@ -111,8 +116,8 @@ func setup_mesh_data(
 	dim_x = rect.x
 	dim_y = rect.y
 	
-	print("Dim x {dim_x}".format({"dim_x": dim_x}))
-	print("Dim y {dim_y}".format({"dim_y": dim_y}))
+	#print("Dim x {dim_x}".format({"dim_x": dim_x}))
+	#print("Dim y {dim_y}".format({"dim_y": dim_y}))
 	
 	setup_polygons(obstacle_region)
 	
@@ -125,7 +130,7 @@ func setup_mesh_data(
 	
 	print("Occupied polygons and large polygons were setup")
 	
-	setup_obstacle_boxes()
+	setup_obstacle_boxes(polygons)
 	
 	print("Obstacle boxes setup")	
 	
@@ -214,16 +219,16 @@ func setup_large_polygons():
 	for p in polygons:
 		var poly = expand_polygon(p, 8)
 		large_polygons.append(poly)
-		var poly_2 = expand_polygon(p, 19)
+		var poly_2 = expand_polygon(p, 16)
 		occupied_polygons.append(poly_2)
 		
 	occupied_polygons = PolygonUtils.order_clockwise(occupied_polygons)
 	large_polygons = PolygonUtils.order_clockwise(large_polygons)
 	return [occupied_polygons, large_polygons]
 	
-func setup_obstacle_boxes():
+func setup_obstacle_boxes(polys):
 	
-	for polygon in occupied_polygons:
+	for polygon in polys:
 		var min_x = INF
 		var max_x = -INF
 		var min_y = INF
@@ -304,6 +309,12 @@ func generate_corners():
 		p_corners.append_array(expand_polygon(polygon, 19))
 	return p_corners
 
+func expand_polygons(dist):
+	var p_corners = []
+	for polygon in polygons:
+		p_corners.append(expand_polygon(polygon, dist))
+	return p_corners
+
 func generate_connections():
 	var connections = []
 	
@@ -322,7 +333,7 @@ func intersect_with_occupied_polygons(p,q):
 		var dir = (q-p).normalized().rotated(PI/2)
 		var critera_1 = GeometryUtils.interset_with_shape(polygon, p + 8 * dir,q + 8 * dir )
 		var critera_2 = GeometryUtils.interset_with_shape(polygon, p - 8 * dir,q - 8 * dir )
-		if GeometryUtils.interset_with_shape(polygon, p,q) and critera_1 and critera_2:
+		if GeometryUtils.interset_with_shape(polygon, p,q) or critera_1 or critera_2:
 			return true
 	return false
 

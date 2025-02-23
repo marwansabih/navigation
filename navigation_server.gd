@@ -59,7 +59,6 @@ var cycle = 0
 func _physics_process(delta):
 	#print(cycle)
 	cycle += 1
-	set_shortest_path(true)
 	
 	OrcaUtils.set_velocities_2(
 		agent_id_to_agent_data,
@@ -72,7 +71,7 @@ func _physics_process(delta):
 		mesh_data.current_max_wall_vision
 	)
 	move_actors(delta)
-	
+	set_shortest_path(true)
 
 func set_shortest_path(forced):
 	var new_cycle = cycle % (agent_id_to_agent_data.size() * 4)
@@ -89,7 +88,7 @@ func set_shortest_path(forced):
 			agent_data["destination"]
 		)
 		
-		if not short_path:
+		if not short_path and "last_shortest_path" in agent_data:
 			short_path = agent_data["last_shortest_path"]
 		
 		agent_data["last_shortest_path"] = short_path
@@ -97,8 +96,9 @@ func set_shortest_path(forced):
 		if short_path and len(short_path) > 1:
 			var pos = agent_data["agent"].position
 			var dist =  pos.distance_to(short_path[0])
-			if dist < 3:
+			while len(short_path) > 1 and dist < 3:
 				short_path.pop_front()
+				dist = pos.distance_to(short_path[0])
 		
 		agent_data["shortest_path"] = short_path
 
@@ -133,12 +133,29 @@ func shortest_path_between_positions(
 			return [p2]
 	"""	
 	
+	var dir_90 = (p1 - p2).normalized()
+	dir_90.rotated(PI/2)
 	
-	if not PolygonUtils.cuts_edge_boxs(
+	var cuts_shifted_line_0 = PolygonUtils.cuts_edge_boxs(
 		p1,
 		p2,
 		mesh_data.edge_boxes
-	):
+	)
+	
+	var cuts_shifted_line_1 = PolygonUtils.cuts_edge_boxs(
+		p1 + dir_90*8,
+		p2 + dir_90,
+		mesh_data.edge_boxes
+	)
+	
+	var cuts_shifted_line_2 = PolygonUtils.cuts_edge_boxs(
+		p1 - dir_90*8,
+		p2 - dir_90*8,
+		mesh_data.edge_boxes
+	)
+	
+	if not cuts_shifted_line_1 and not cuts_shifted_line_2 and not cuts_shifted_line_0:
+		print(true)
 		return [p2]
 	
 	"""
@@ -193,6 +210,8 @@ func shortest_path_between_positions(
 	var s_path = [] #[p1]
 	s_path.append_array(path)
 	s_path.append(p2)
+	if s_path[0].distance_to(p1) < 3:
+		s_path.pop_front()
 	#s_path = subdivide_shortest_path(s_path)
 	return s_path
 
@@ -238,32 +257,37 @@ func move_actors(delta):
 		var agent_data = agent_id_to_agent_data[agent_id]
 		move_along_direction(
 			agent_data,
-			agent_data["shortest_path"],
+			#agent_data["shortest_path"],
 			delta
 		)
 		
 
 func move_along_direction(
 	agent_data,
-	path,
+	#path,
 	delta
 ):
+	print(agent_data["new_velocity"])
 	agent_data["agent"].position += agent_data["new_velocity"] * delta
+	
+	var path = agent_data["shortest_path"]
+	print(path)
 	
 	if not path:
 		agent_data["dir"] = null
+		agent_data["new_velocity"] = Vector2(0,0)
 		return
 	var velocity = agent_data["velocity"]
 	var pos = agent_data["agent"].position
+	#print(path)
+	#print(pos)
 	while path and path[0].distance_to(pos) < 2:
 		path.pop_front()
-	if path and path[0].distance_to(pos) < 2:
-		path.pop_front()
-		if not path:
-			agent_data["destination"] = null
-			agent_data["new_velocity"] = Vector2(0,0)
-		if path:
-			agent_data["dir"] = pos.direction_to(path[0])
-			agent_data["org_dir"] = pos.direction_to(path[0])
-			agent_data["new_velocity"] = velocity * agent_data["org_dir"]
+	agent_data["shortest_path"] = path
+	if not path:
+		agent_data["destination"] = null
+		agent_data["new_velocity"] = Vector2(0,0)
+	if path:
+		agent_data["dir"] = pos.direction_to(path[0])
+		agent_data["org_dir"] = pos.direction_to(path[0])
 

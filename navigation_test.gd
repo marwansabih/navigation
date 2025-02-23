@@ -9,17 +9,46 @@ func _ready():
 
 	navigation_server = NavigationServer.new()
 	navigation_server.setup_mesh_data($Polygons, "test_map")
-
+	
+	print("corners_old")
+	print(navigation_server.mesh_data.corners)
+	
+	var mesh_data = navigation_server.mesh_data
+	
+	#print(mesh_data.edges_to_dist)
+	var old = mesh_data.edges_to_path.duplicate()
 	#var l_polygons = navigation_server.mesh_data.obstacles
 	#edge_boxes = PolygonUtils.generate_polygon_edge_boxes(l_polygons)
-
+	
+	navigation_server.setup_mesh_data($Polygons, "test_map_3")
+	
+	var new_data = navigation_server.mesh_data.edges_to_path
+	
+	print("corners_new")
+	print(navigation_server.mesh_data.corners)
+	
+	
+	#print(mesh_data.edges_to_path)
+	
+	#print(new_data == old)
+	
+	#for key in old:
+	#	for key_2 in old[key]:
+	#		if old[key][key_2] != new_data[key][key_2]:
+	#			print()
+	#			print("old")
+	#			print(old[key][key_2])
+	#			print("new")
+	#			print(new_data[key][key_2])
 
 	for actor in $Actors.get_children():
-		navigation_server.register_agent(actor, 50, 20,8)
+		navigation_server.register_agent(actor, 50, 15,8)
 		navigation_server.set_agent_destination(actor, Vector2(1079, 264))
+		#break
 	
 	for actor in $Actors2.get_children():
-		navigation_server.register_agent(actor, 50, 20, 8)
+		#break
+		navigation_server.register_agent(actor, 50, 15, 8)
 		navigation_server.set_agent_destination(actor, Vector2(300, 264))
 	
 
@@ -30,8 +59,10 @@ func _input(event):
 			MOUSE_BUTTON_LEFT:
 				for actor in $Actors.get_children():
 					navigation_server.set_agent_destination(actor, event.position)
+					#break
 			MOUSE_BUTTON_RIGHT:
 				for actor in $Actors2.get_children():
+					#break
 					navigation_server.set_agent_destination(actor, event.position)
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
@@ -46,8 +77,7 @@ func _physics_process(delta):
 func _draw():
 	var mesh_data : MeshData = navigation_server.mesh_data
 
-	for corner in mesh_data.corners:
-		draw_circle(corner, 3, Color.WHITE)
+
 
 	for h in mesh_data.convex_polygons.size():
 		var poly = mesh_data.convex_polygons[h]
@@ -74,10 +104,19 @@ func _draw():
 			var p1 = poly[i]
 			var p2 = poly[(i+1) % poly.size()]
 			var color = Color.WHITE
-			var size = 6
+			var size = 3
 			draw_line(p1, p2, color, size)
-
-
+	
+	for h in mesh_data.polygons.size():
+		var poly = mesh_data.occupied_polygons[h]
+		for i in poly.size():
+			var p1 = poly[i]
+			var p2 = poly[(i+1) % poly.size()]
+			var color = Color.BLACK
+			var size = 3
+			draw_line(p1, p2, color, size)
+	
+	"""
 	for box in mesh_data.edge_boxes:
 		draw_line(
 			box[0],
@@ -85,81 +124,36 @@ func _draw():
 			Color.BLUE,
 			5
 		)
-		
-	var l1 = Vector2(300,200)
-	var l2 = Vector2(380,210)
-	if PolygonUtils.cuts_edge_boxs(
-		l1,
-		l2,
-		mesh_data.edge_boxes
-	):
-		draw_line(
-			l1,
-			l2,
-			Color.RED,
-			10
-		)
-	else:
-		draw_line(
-			l1,
-			l2,
-			Color.BLUE,
-			10
-		)
-
+	"""
+	
+	for i in mesh_data.edges_to_path:
+		break
+		for j in mesh_data.edges_to_path[i]:
+			var path = mesh_data.edges_to_path[i][j]
+			for k in len(path) - 1:
+				draw_line(path[k], path[k+1], Color.WHITE, 3)
+	
+	for corner in mesh_data.corners:
+		draw_circle(corner, 3, Color.RED)
+				
 	for agent_id in navigation_server.agent_id_to_agent_data:
 		var agent_data = navigation_server.agent_id_to_agent_data[agent_id]
 		var pos = agent_data["agent"].position
 		var path = agent_data["shortest_path"]
 		
 		if path:
-			draw_line(pos, path[0], Color.BLUE)
+			draw_line(pos, path[0], Color.VIOLET)
 			
 		draw_circle(
 			pos,
 			agent_data["radius"],
 			Color.BLACK
-		)		
+		)
 		
-		continue
-		"""
-		var walls = OrcaUtils.get_close_walls(
+		draw_line(
 			pos,
-			mesh_data.grid_position_to_walls,
-			mesh_data.current_max_wall_vision
+			pos + agent_data["new_velocity"],
+			Color.RED,
+			3
 		)
-		if walls == []:
-			print("no walls found")
-		#print(walls)
-
-		for wall in walls:
-			draw_line(
-				wall[0],
-				wall[1],
-				Color.RED,
-				4
-			)
-			var w_p = GeometryUtils.get_closest_point_on_line(
-				wall[0],
-				wall[1],
-				pos
-			)
-			draw_circle(
-				w_p,
-				5,
-				Color.BLACK
-			)
-
-		var in_range = OrcaUtils.in_wall_range(
-			pos,
-			mesh_data.grid_position_to_walls
-		)
-		if in_range:
-			draw_circle(
-				pos,
-				16,
-				Color.RED
-			)
-
-		"""
 

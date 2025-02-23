@@ -139,11 +139,12 @@ func _draw():
 		var path = agent_data["shortest_path"]
 		print(pos)
 		
+		"""
 		var walls = OrcaUtils.get_close_walls(
 			pos,
 			mesh_data.grid_position_to_walls
 		)
-		
+		"""
 		
 		"""
 		if walls == []:
