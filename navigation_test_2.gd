@@ -1,5 +1,7 @@
 extends Node2D
 
+class_name VisibileAreaGenerator
+
 var navigation_server : NavigationServer
 
 var edge_boxes

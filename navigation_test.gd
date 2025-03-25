@@ -2,6 +2,18 @@ extends Node2D
 
 var navigation_server : NavigationServer
 
+var adjusted_polygons
+
+var visibile_corners
+
+var observer
+
+var lines
+
+var area
+
+var areas 
+
 #var edge_boxes
 
 # Called when the node enters the scene tree for the first time.
@@ -24,8 +36,59 @@ func _ready():
 	
 	var new_data = navigation_server.mesh_data.edges_to_path
 	
+	adjusted_polygons = VisibilityHelper.adjust_polygons(
+		mesh_data.polygons,
+		1152,
+		648
+	)
+	
+	observer = mesh_data.corners[19]
+	
+	visibile_corners = VisibilityHelper.get_visible_corners_for_observer(
+		adjusted_polygons,
+		observer,
+		1152,
+		648
+	)
+	
+	lines = VisibilityHelper.generate_view_lines(
+		observer,
+		adjusted_polygons,
+		visibile_corners["visible_corners"],
+		1152,
+		648
+	)
+	
+	
+	area = VisibilityHelper.gernerate_visible_area(
+		observer,
+		adjusted_polygons,
+		visibile_corners,
+		1152,
+		648
+	)
+	
+	areas = VisibilityHelper.generate_visible_areas(
+		mesh_data.corners,
+		mesh_data.polygons,
+		1152,
+		648
+	)
+	
+	print("areas")
+	print(areas)
+	area = areas[0]
+	
+	
+	print("visible corners")
+	print(visibile_corners)
+	
+	print("adjusted polygons")
+	print(adjusted_polygons)
+	
 	print("corners_new")
 	print(navigation_server.mesh_data.corners)
+	
 	
 	
 	#print(mesh_data.edges_to_path)
@@ -42,13 +105,13 @@ func _ready():
 	#			print(new_data[key][key_2])
 
 	for actor in $Actors.get_children():
-		navigation_server.register_agent(actor, 50, 15,8)
+		navigation_server.register_agent(actor, 50, 50,8)
 		navigation_server.set_agent_destination(actor, Vector2(1079, 264))
 		#break
 	
 	for actor in $Actors2.get_children():
 		#break
-		navigation_server.register_agent(actor, 50, 15, 12)
+		navigation_server.register_agent(actor, 50, 50, 12)
 		navigation_server.set_agent_destination(actor, Vector2(300, 264))
 	
 
@@ -135,7 +198,24 @@ func _draw():
 	
 	for corner in mesh_data.corners:
 		draw_circle(corner, 3, Color.RED)
-				
+	"""
+	for i in mesh_data.visibility_polygons[0].size():
+		var p1 = mesh_data.visibility_polygons[0][i]
+		var p2 = mesh_data.visibility_polygons[0][(i+1) % mesh_data.visibility_polygons[0].size()]
+		draw_line(p1, p2, Color.DARK_BLUE, 6)
+	draw_circle(mesh_data.corners[0], 6, Color.GREEN)
+	"""
+	
+	for polygon in adjusted_polygons:
+		print("draw polygon")
+		print(polygon)
+		for i in polygon.size():
+			var p1 = polygon[i]
+			var p2 = polygon[(i+1) % polygon.size()]
+			draw_circle(p1, 8, Color.RED)
+			draw_circle(p2, 8, Color.RED)
+			draw_line(p1, p2, Color.DARK_BLUE, 6)
+		
 	for agent_id in navigation_server.agent_id_to_agent_data:
 		var agent_data = navigation_server.agent_id_to_agent_data[agent_id]
 		var pos = agent_data["agent"].position
@@ -149,11 +229,53 @@ func _draw():
 			agent_data["radius"],
 			Color.BLACK
 		)
+	
+	draw_circle(
+		observer,
+		6,
+		Color.BLUE_VIOLET
+	)	
+	
+	for visible_corner in visibile_corners["visible_corners"]:
+		draw_circle(
+			visible_corner,
+			6,
+			Color.ORANGE
+		)
 		
+	for line in lines:
+		if not line:
+			continue
+		draw_line(
+			line[0],
+			line[1],
+			Color.DARK_GOLDENROD,
+			5
+		)
+		
+	# Generate and draw view lines
+	for point in visibile_corners["visible_corners"]:
+		var line = VisibilityHelper.generate_view_line(observer, point, 1152, 648)
+		if line.size() == 2:
+			draw_circle(point, 5, Color(0, 1, 0))  # Mark the start point
+			draw_line(line[0], line[1], Color(1, 0, 0), 2)  # Draw the view line
+			draw_circle(line[1], 5, Color(0, 0, 1))  # Mark the intersection point
+		
+		"""
 		draw_line(
 			pos,
 			pos + agent_data["new_velocity"],
 			Color.RED,
 			3
+		)
+		"""
+	for i in area.size():
+		var point = area[i]
+		var next_point = area[(i+1) % area.size()]
+		draw_line(
+			point,
+			next_point,
+			Color.RED,
+			5
 		)
 

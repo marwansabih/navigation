@@ -2,6 +2,22 @@ extends Node
 
 class_name PolygonUtils
 
+static func intersect_with_polygons(polygons, l1, l2):
+	for polygon in polygons:
+		var size = polygon.size()
+		for i in size:
+			var next_i = (i+1) % size
+			var p1 = polygon[i]
+			var p2 = polygon[next_i]
+			if GeometryUtils.intersection_exists(
+				p1,
+				p2,
+				l1,
+				l2
+			):
+				return true
+	return false
+
 static func sort_first_by_x_then_by_y(box_1, box_2):
 	var p1 = box_1[0]
 	var p2 = box_2[0]
@@ -607,13 +623,13 @@ static func get_area_path_between_intersections(
 	start_idx,
 	end_index
 ):
-	print("blog start")
-	print("start id")
-	print(start_idx)
-	print(end_index)
-	print(intersection)
-	print(next_intersection)
-	print("blog end")
+	#print("blog start")
+	#print("start id")
+	#print(start_idx)
+	#print(end_index)
+	#print(intersection)
+	#print(next_intersection)
+	#print("blog end")
 	var before_intersection : Vector2 = area[start_idx]
 	#if end_index < start_idx:
 	#	var swap = start_idx
@@ -631,8 +647,8 @@ static func get_area_path_between_intersections(
 	if end_index < start_idx:
 		var segement = area.slice(start_idx + 1 , area.size())
 		var segment_2 = area.slice(0, (end_index + 1) % area.size())
-		print(segement)
-		print(segment_2)
+		#print(segement)
+		#print(segment_2)
 		return [intersection] + segement + segment_2 + [next_intersection]
 	return [intersection] + area.slice(start_idx + 1, end_index + 1) + [next_intersection]
 	

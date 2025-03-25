@@ -18,6 +18,7 @@ class_name MeshData
 @export var grid_position_to_walls = {}
 @export var obstacles = []
 @export var edge_boxes = []
+@export var visibility_polygons = []
 
 var current_max_wall_vision = 32
 
@@ -110,6 +111,34 @@ func setup_mesh_data(
 		
 		#ResourceSaver.save(self, map_path)
 		polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
+			
+		visibility_polygons = VisibilityHelper.generate_visible_areas(
+			corners,
+			polygons,
+			dim_x,
+			dim_y
+		)
+		print("length corners")
+		print(corners.size())
+		print("length visible polygons")
+		print(visibility_polygons.size())
+		#print("here")
+		#print("dim_x")
+		#print(dim_x)
+		#print("dim_y")
+		#print(dim_y)
+		#print("polygons")
+		#print(polygons)
+		#print("verticy")
+		#print(corners[0])
+		"""
+		var allowed_area = PolygonUtils.extract_allowed_area(
+			polygons,
+			dim_x,
+			dim_y	
+		)
+		visibility_polygons = [allowed_area] + visibility_polygons
+		"""
 		return
 	
 	var rect = obstacle_region.get_viewport().get_visible_rect().size		

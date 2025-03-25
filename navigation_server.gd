@@ -92,7 +92,7 @@ func set_shortest_path(forced):
 		
 		if not short_path and "last_shortest_path" in agent_data:
 			short_path = agent_data["last_shortest_path"]
-			print("here")
+			#print("here")
 		
 		agent_data["last_shortest_path"] = short_path
 		
@@ -101,7 +101,7 @@ func set_shortest_path(forced):
 			var dist =  pos.distance_to(short_path[0])
 			while len(short_path) > 1 and dist < 3:
 				short_path.pop_front()
-				print("pop")
+				#print("pop")
 				dist = pos.distance_to(short_path[0])
 		
 		agent_data["shortest_path"] = short_path
@@ -185,12 +185,22 @@ func shortest_path_between_positions(
 	#var pos_to_corner_group_id = mesh_data.position_to_corner_group_id
 	
 	
+	"""
 	var neigh_1 = mesh_data.corner_groups[
 		mesh_data.position_to_corner_group_id[p1_m]
 	]
 	var neigh_2 = mesh_data.corner_groups[
 		mesh_data.position_to_corner_group_id[p2_m]
 	]
+	"""
+	var neigh_1 = VisibilityHelper.get_visible_corner_ids(
+		mesh_data.visibility_polygons,
+		p1
+	)
+	var neigh_2 = VisibilityHelper.get_visible_corner_ids(
+		mesh_data.visibility_polygons,
+		p2
+	)
 	
 	
 	var min_dist = INF
@@ -218,6 +228,7 @@ func shortest_path_between_positions(
 		s_path.pop_front()
 	#s_path = subdivide_shortest_path(s_path)
 	return s_path
+
 
 func intersect_with_obstacle_box(obstacle_box, p, q):
 	var x_min = obstacle_box[0]
@@ -271,13 +282,13 @@ func move_along_direction(
 	#path,
 	delta
 ):
-	print(agent_data["new_velocity"])
+	#print(agent_data["new_velocity"])
 	agent_data["agent"].position += agent_data["new_velocity"] * delta
 	
 	var path = agent_data["shortest_path"]
-	print(path)
-	if len(path) > 0:
-		print(path[0].distance_to(agent_data["agent"].position))
+	#print(path)
+	#if len(path) > 0:
+	#	print(path[0].distance_to(agent_data["agent"].position))
 	
 	if not path:
 		agent_data["dir"] = null
