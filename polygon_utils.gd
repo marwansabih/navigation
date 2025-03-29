@@ -2,6 +2,89 @@ extends Node
 
 class_name PolygonUtils
 
+
+static func _get_row_intervalls(polygon, dim_x, y):
+	var size = polygon.size()
+	var found_x_intersections = []
+	for i in size:
+		var l1 = polygon[i]
+		var l2 = polygon[(i+1) % size]
+		if l1 == l2:
+			continue
+		if l1.y == l2.y and int(l1.y) == y:
+			found_x_intersections.append(l1.x)
+			found_x_intersections.append(l2.x)
+		if GeometryUtils.intersection_exists(
+			l1,
+			l2,
+			Vector2(-10, y),
+			Vector2(dim_x + 10, y)
+		):
+			var dir = l2 - l1
+			if dir.y == 0:
+				continue
+			var s = (y - l1.y)/ dir.y
+			var intersection = l1 + s * dir
+			found_x_intersections.append(intersection.x)
+	found_x_intersections.sort()
+	var intervalls = []
+	for i in found_x_intersections.size()-1:
+		var x1 = found_x_intersections[i]
+		var x2 = found_x_intersections[i+1]
+		if x1 == x2:
+			continue
+		if PolygonUtils.in_polygon(
+			polygon,
+			Vector2((x1 + x2)/2, y)
+		):
+			intervalls.append([x1, x2])	
+	return intervalls
+			
+		
+
+static func generate_polygon_row_dict(polygons, dim_x, dim_y):
+	
+	var y_to_polygon_idx_to_intervalls = {}
+	for y in dim_y:
+		y_to_polygon_idx_to_intervalls[int(y)] = {}
+	
+	for i in polygons.size():
+		var polygon = polygons[i]
+		for y in dim_y:
+			var intervalls = _get_row_intervalls(
+				polygon,
+				dim_x,
+				y
+			)
+			if intervalls:
+				y_to_polygon_idx_to_intervalls[int(y)][i] = intervalls
+	return y_to_polygon_idx_to_intervalls
+	
+static func get_polygon_idx_from_row_dict(pos, row_dict):
+	var y = int(pos.y)
+	if not y in row_dict:
+		return null
+	for idx in row_dict[y]:
+		var intervalls = row_dict[y][idx]
+		for intervall in intervalls:
+			if pos.x >= intervall[0] and pos.x <= intervall[1]:
+				return idx
+	return null
+	
+static func get_polygon_ids_from_row_dict(pos, row_dict):
+	var y = int(pos.y)
+	var ids = []
+	if not row_dict.keys().has(y):
+		return []
+	for idx in row_dict[y]:
+		var intervalls = row_dict[y][idx]
+		for intervall in intervalls:
+			if pos.x >= intervall[0] and pos.x <= intervall[1]:
+				ids.append(idx)
+				continue
+	return ids
+	
+
 static func intersect_with_polygons(polygons, l1, l2):
 	for polygon in polygons:
 		var size = polygon.size()
@@ -196,7 +279,9 @@ static func _get_walls_in_range(
 		margin
 	)
 	"""
-	var ps = polygons
+	var ps = PolygonUtils.order_clockwise(
+		polygons	
+	)
 	for polygon in ps:#k in ps:
 		#var polygon = polygons[k]
 		for i in polygon.size():
@@ -211,7 +296,8 @@ static func _get_walls_in_range(
 				y_min,
 				y_max
 			):
-				walls.append([p1, p2])
+				var outside_normal = p1.direction_to(p2).rotated(PI/2) 
+				walls.append([p1, p2, outside_normal])
 	
 	return walls
 			

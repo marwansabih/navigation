@@ -8,6 +8,9 @@ extends Node
 #TODO Fix saving "created halfplanes"
 #TODO Parameter VertixThreshold
 #TODO Parameter adjustable other agent distance detection maybe
+#TODO Fix GO Through Walls
+#TODO Fix Only few are moving
+#TODO Obstacle boundaries
 
 var mesh_data : MeshData
 var agent_id_to_agent_data = {}
@@ -192,7 +195,6 @@ func shortest_path_between_positions(
 	var neigh_2 = mesh_data.corner_groups[
 		mesh_data.position_to_corner_group_id[p2_m]
 	]
-	"""
 	var neigh_1 = VisibilityHelper.get_visible_corner_ids(
 		mesh_data.visibility_polygons,
 		p1
@@ -201,15 +203,24 @@ func shortest_path_between_positions(
 		mesh_data.visibility_polygons,
 		p2
 	)
+	"""
 	
+	var neigh_1 = PolygonUtils.get_polygon_ids_from_row_dict(
+		p1,
+		mesh_data.visibility_areas_row_dict
+	)
+	var neigh_2 = PolygonUtils.get_polygon_ids_from_row_dict(
+		p2,
+		mesh_data.visibility_areas_row_dict
+	)
 	
 	var min_dist = INF
 	var edge_1
 	var edge_2
 	for i in neigh_1:
-		var dist_1 = GeometryUtils.isometric_distance(p1_m, mesh_data.corners[i])
+		var dist_1 = GeometryUtils.isometric_distance(p1, mesh_data.corners[i])
 		for j in neigh_2:
-			var dist_2 = GeometryUtils.isometric_distance(p2_m, mesh_data.corners[j])
+			var dist_2 = GeometryUtils.isometric_distance(p2, mesh_data.corners[j])
 			var dist = dist_1 + mesh_data.edges_to_dist[i][j] + dist_2
 			
 			if dist < min_dist:

@@ -159,6 +159,137 @@ static func closest_point_on_vo_boundary_2(
 	
 	return [t1, t2, u_velocity - opt_v, normal]
 
+static func closest_point_on_wall_boundary(
+	pos : Vector2,
+	wall,
+	rA: float,
+	tau: float,
+	opt_v
+):
+	
+
+	
+	var c1 = (wall[0] - pos)/tau
+	var c2 = (wall[1] - pos)/tau
+	
+	var outside_dir = wall[2]
+	
+	rA = rA/tau
+	
+	# need to use outside_dir to check whether infront
+	# or behind wall
+	
+	var behind_wall =  c1.dot(outside_dir) >= 0
+	
+	# wall is hidden behind some other wall infront of it
+	if behind_wall:
+		return null
+	
+	# Touching the wall will be handled here
+	var c_p = GeometryUtils.get_closest_point_on_line(c1, c2, Vector2(0,0))
+	if c_p.length() <= rA + 0.000001 and in_front_range(c1, c2, Vector2(0,0)):
+		var p1 = c1 + rA * outside_dir
+		var p2 = c2 + rA * outside_dir
+		var u_velocity = GeometryUtils.get_closest_point_on_line(
+			p1,
+			p2,
+			opt_v
+		) 
+		return [
+			p1, #0
+			p2, #1 
+			Vector2(1,0), #2 
+			Vector2(1,0), #3
+			Vector2(0,0), #4
+			Vector2(0,0), #5
+			Vector2(0,0), #6
+			Vector2(0,0), #7
+			c1, #8
+			c2, #9
+			u_velocity - opt_v, #10
+			outside_dir #11
+		]
+	
+	var t1s = calculate_tangent_points(c1, rA)
+	var t2s = calculate_tangent_points(c2, rA)
+	
+	var t1 = t1s[0]
+	var t2 = t2s[0]
+	
+	if c2.distance_to(t1) > c2.distance_to(t1s[1]):
+		t1 = t1s[1]
+	
+	if c1.distance_to(t2) > c1.distance_to(t2s[1]):
+		t2 = t2s[1]
+	
+	
+	var p1 = c1 + rA * outside_dir
+	var p2 = c2 + rA * outside_dir
+	
+	var p1_t = c1 - t1
+	var p2_t = c2 - t2
+	
+	var t1_dir = p1_t 
+	var t2_dir = p2_t	
+	
+	var on_t1 = on_half_line(p1_t, 2 * p1_t, opt_v )  
+	var on_t2 = on_half_line(p2_t, 2 * p2_t, opt_v )
+	var on_front_line = in_front_range(c1, c2, opt_v)
+	
+	var ns = []
+	var us = []
+	
+	if on_t1:
+		var n1 = outside_normal(Vector2(0, 0), p1_t, c1)
+		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), p1_t, opt_v)
+		ns += [n1]
+		us += [u1]
+	if on_t2:
+		var n1 = outside_normal(Vector2(0, 0), p2_t, c2)
+		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), p2_t, opt_v)
+		ns += [n1]
+		us += [u1]
+	if on_front_line:
+		var n1 = outside_dir
+		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(p1, p2, opt_v)
+		ns += [n1]
+		us += [u1]
+		
+	var dist = INF
+	var u_velocity = null
+	var normal = null
+	for i in range(len(ns)):
+		var u_c = us[i]
+		var dist_c = u_c.distance_to(opt_v)
+		if dist_c < dist:
+			dist = dist_c
+			u_velocity = u_c
+			normal = ns[i]  
+	
+	if not u_velocity:
+		var c = c1
+		if c1.distance_to(opt_v) > c2.distance_to(opt_v):
+			c = c2
+		normal = c.direction_to(opt_v)
+		u_velocity = c + rA*normal
+	
+	return [p1, p2, t1_dir, t2_dir, p1_t, p2_t, t1 , t2, c1, c2, u_velocity - opt_v, normal]
+	
+static func in_front_range(c1: Vector2, c2: Vector2, point):
+	var dir = c1.direction_to(c2)
+	var d1 = c1.distance_to(c2)
+	var d2 = dir.dot(point-c1)
+	return d2 >= 0 and d2 <= d1
+
+static func calculate_tangent_points(p: Vector2, r: float):
+	# Will calculate the points lying on the tangents
+	# of a circle at origin (0,0) 
+	# and passing through the point p
+	var d = p.length()
+	var s1 = r**2/d**2*p
+	var s2 = r/d**2*sqrt(d**2- r**2) * Vector2(-p.y, p.x)
+	return [s1+ s2, s1 - s2]
+
 class HalfPlane:
 	var p : Vector2
 	var l_dir : Vector2
@@ -613,6 +744,39 @@ static func generate_agent_halfplanes(
 	agent["half_planes"] = h_ps 
 		
 
+static func generate_wall_halfplanes(
+	agent,
+	walls
+):
+	var h_ps : Array[HalfPlane] = []
+	var opt_vel = agent["opt_velocity"]
+	for wall in walls:
+		var pos = agent["agent"].position
+		
+		var vs = closest_point_on_wall_boundary(
+			pos,
+			wall,
+			agent["radius"],
+			1,
+			opt_vel
+		)
+		
+		if not vs:
+			continue
+		
+		var u: Vector2 = vs[10]
+		var n = vs[11]
+		var factor = 1 #1/2		
+		
+		var h_p = HalfPlane.new(
+			opt_vel + factor*u,
+			n.rotated(-PI/2),
+			n,
+			-1
+		)
+		h_ps.append(h_p)
+	return h_ps 
+
 static func generate_agent_halfplanes_2(
 	agent,
 	others_all,
@@ -892,19 +1056,34 @@ static func set_velocity_2(
 	#var pos = GeometryUtils.get_closest_mesh_position(agent["position"], 2)
 	
 	#region = pos_to_region[pos]
-	
+	"""
 	var near_wall = in_wall_range(
 		agent["agent"].position,
 		grid_position_to_walls,
 		wall_vision
 	)
+	"""
+	
+	var walls = get_close_walls(
+		agent["agent"].position,
+		grid_position_to_walls,
+		wall_vision
+	)
+	
+	var wall_planes = generate_wall_halfplanes(
+		agent,
+		walls
+	)
+	#wall_planes = []
 
+	"""
 	for i in convex_polygons.size():
 		if PolygonUtils.in_polygon(convex_polygons[i], agent["agent"].position):
 			region = adjust_region(polygon_regions[i], agent["agent"].position)
 			visited_regions.append(convex_polygons[i])
 			region_idx = i
 			break
+	
 	if region_idx == null:
 		near_wall = false
 		region_idx = agent["last_region_idx"]
@@ -918,14 +1097,16 @@ static func set_velocity_2(
 		#		break
 	
 	var target_region_idx = -1
+	"""
 	
+	"""
 	for i in convex_polygons.size():
 		if not path:
 			continue
 		if PolygonUtils.in_polygon(convex_polygons[i], path[0]):
 			target_region_idx = i
 			break
-	
+	"""
 	for o in others_all:
 		if o["agent"].position.distance_to(agent["agent"].position) < 200:
 			others.append(o)
@@ -938,29 +1119,42 @@ static func set_velocity_2(
 	
 	var half_planes : Array[HalfPlane] = []
 	
-	half_planes.append_array(h_ps)
-	if near_wall:
-		half_planes.append_array(region)
+	if not wall_planes:
+		wall_planes = []
 	
-	var xs = randomized_bounded_lp(half_planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
+	half_planes.append_array(h_ps)
+	half_planes.append_array(wall_planes)
+	print(len(half_planes))
+	#if near_wall:
+	#	half_planes.append_array(region)
+	
+	var xs = randomized_bounded_lp(
+		half_planes,
+		agent["opt_velocity"],
+		opt_vel,
+		agent["delta_v"]
+	)
 	
 	var new_velocity = xs[1]
 	
 	if not new_velocity:
 		new_velocity = Vector2(0,0)
 	agent["new_velocity"] = new_velocity
+	#agent["new_velocity"] = opt_vel
 	
-	if not near_wall:
-		agent["last_region_idx"] = region_idx
-		return
+	return
+	
+	#if not near_wall:
+	#	agent["last_region_idx"] = region_idx
+	#	return
 	
 	if PolygonUtils.in_polygon(convex_polygons[region_idx], agent["agent"].position + agent["opt_velocity"] ):
 		return
 	
 	var min_dist = new_velocity.distance_to(agent["opt_velocity"])
 	# Force traveling to next region if current region doesn't hold the next path stop
-	if path and not region_idx == target_region_idx and min_dist > 3:
-		min_dist = INF
+	#if path and not region_idx == target_region_idx and min_dist > 3:
+	#	min_dist = INF
 	
 	var corner_neighbours = PolygonUtils.pos_to_corner_neighbours(
 		agent["agent"].position,
@@ -975,7 +1169,8 @@ static func set_velocity_2(
 		var new_region = adjust_region(polygon_regions[r_idx], agent["agent"].position)
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
-		planes.append_array(new_region)
+		#planes.append_array(new_region)
+		planes.append_array(wall_planes)
 		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 		var velocity = vs[1]
 		if velocity == null:
@@ -995,7 +1190,8 @@ static func set_velocity_2(
 		var new_region = adjust_region(polygon_regions[r_idx], agent["agent"].position)
 		var planes : Array[HalfPlane] = []
 		planes.append_array(h_ps)
-		planes.append_array(new_region)
+		#planes.append_array(new_region)
+		#planes.append_array(wall_planes)
 		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
 		var velocity = vs[1]
 		if velocity == null:
@@ -1132,7 +1328,10 @@ static func set_velocities_2(
 	var resting_agents = []
 	var new_resting_agent = true
 	
-
+	for agent in agents:
+		if not "new_velocity" in agent:
+			agent["new_velocity"] = agent["opt_velocity"]
+	
 	while new_resting_agent:
 		new_resting_agent = false
 		
