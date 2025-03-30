@@ -66,10 +66,13 @@ func setup_mesh_data(
 		)
 		
 		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
-			large_polygons
+			polygons #large_polygons
 		)
 		
-		setup_obstacle_boxes(large_polygons)
+		setup_obstacle_boxes(
+			polygons
+			#large_polygons
+		)
 		
 		#obstacle_boxes = mesh_data.obstacle_boxes
 		#pos_to_region = mesh_data.pos_to_region

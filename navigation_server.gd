@@ -102,7 +102,7 @@ func set_shortest_path(forced):
 		if short_path and len(short_path) > 1:
 			var pos = agent_data["agent"].position
 			var dist =  pos.distance_to(short_path[0])
-			while len(short_path) > 1 and dist < 3:
+			while len(short_path) > 1 and dist < 5:
 				short_path.pop_front()
 				#print("pop")
 				dist = pos.distance_to(short_path[0])
@@ -140,6 +140,7 @@ func shortest_path_between_positions(
 			return [p2]
 	"""	
 	
+	var dir = (p1 - p2).normalized()
 	var dir_90 = (p1 - p2).normalized()
 	dir_90.rotated(PI/2)
 	
@@ -150,13 +151,13 @@ func shortest_path_between_positions(
 	)
 	
 	var cuts_shifted_line_1 = PolygonUtils.cuts_edge_boxs(
-		p1 + dir_90*8,
-		p2 + dir_90,
+		p1 + dir_90*8 + dir * 8,
+		p2 + dir_90*8,
 		mesh_data.edge_boxes
 	)
 	
 	var cuts_shifted_line_2 = PolygonUtils.cuts_edge_boxs(
-		p1 - dir_90*8,
+		p1 - dir_90*8 + dir * 8,
 		p2 - dir_90*8,
 		mesh_data.edge_boxes
 	)
@@ -235,7 +236,7 @@ func shortest_path_between_positions(
 	var s_path = [] #[p1]
 	s_path.append_array(path)
 	s_path.append(p2)
-	if s_path[0].distance_to(p1) < 3:
+	if s_path[0].distance_to(p1) < 5:
 		s_path.pop_front()
 	#s_path = subdivide_shortest_path(s_path)
 	return s_path
