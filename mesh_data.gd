@@ -1,25 +1,17 @@
 extends Resource
 class_name MeshData
 
-#@export var position_to_corner_group_id = {}
-#export var corner_groups = []
 @export var occupied_polygons = []
-@export var convex_polygons = []
-@export var polygon_neighbours_dict = {}
-@export var polygon_corner_neighbour_dict = {}
 @export var polygon_regions = []
-#@export var pos_to_region = {}
 @export var corners = [] 
 @export var edges_to_dist = {}
 @export var edges_to_path = {}
-#@export var vertices_to_path = {}
 @export var obstacle_boxes = []
 @export var obstacle_map = {}
 @export var grid_position_to_walls = {}
 @export var obstacles = []
 @export var edge_boxes = []
 @export var visibility_polygons = []
-#@export var convex_region_row_dict = {}
 @export var visibility_areas_row_dict = {}
 
 var current_max_wall_vision = 32
@@ -43,18 +35,9 @@ func setup_mesh_data(
 	
 	if ResourceLoader.exists(map_path) or false:
 		var mesh_data = ResourceLoader.load(map_path)
-		#position_to_corner_group_id = mesh_data.position_to_corner_group_id
-		#corner_groups = mesh_data.corner_groups
 		occupied_polygons = mesh_data.occupied_polygons
-		convex_polygons = mesh_data.convex_polygons
-		polygon_neighbours_dict = mesh_data.polygon_neighbours_dict
-		polygon_corner_neighbour_dict = mesh_data.polygon_corner_neighbour_dict
 		visibility_polygons = mesh_data.visibility_polygons
 		visibility_areas_row_dict = mesh_data.visibility_areas_row_dict
-		#convex_region_row_dict = mesh_data.convex_region_row_dict
-		
-		polygon_corner_neighbour_dict = PolygonUtils.generate_polygon_corner_neighbour_dict(convex_polygons)
-	
 		
 		setup_polygons(obstacle_region) 
 		
@@ -66,16 +49,13 @@ func setup_mesh_data(
 		)
 		
 		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
-			polygons #large_polygons
+			polygons
 		)
 		
 		setup_obstacle_boxes(
 			polygons
-			#large_polygons
 		)
 		
-		#obstacle_boxes = mesh_data.obstacle_boxes
-		#pos_to_region = mesh_data.pos_to_region
 		corners = mesh_data.corners
 		edges_to_dist = mesh_data.edges_to_dist
 		edges_to_path = mesh_data.edges_to_path
@@ -99,7 +79,7 @@ func setup_mesh_data(
 		)
 		
 		#ResourceSaver.save(self, map_path)
-		polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
+		#polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
 
 		return
 	
@@ -122,26 +102,10 @@ func setup_mesh_data(
 	
 	print("Obstacle boxes setup")	
 	
-	convex_polygons = PolygonUtils.allowed_area_splitted_convex(
-		large_polygons,
-		dim_x,
-		dim_y
-	)
-	
-	print("Convex polygons were setup")
-	
 	# gnerating polygon_regions because self defined datastructure can't be saved
-	polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
+	#polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
 	
 	print("Polygon regions were setup")
-	
-	polygon_neighbours_dict = PolygonUtils.generate_polygon_neighbour_dict(convex_polygons)
-	
-	print("Polygon neighbours dict was setup")
-	
-	polygon_corner_neighbour_dict = PolygonUtils.generate_polygon_corner_neighbour_dict(convex_polygons)
-	
-	print("Polygon corner neighbour dict was setup")
 		
 	#pos_to_region = setup_pos_to_region(dim_x, dim_y)
 	
@@ -188,7 +152,7 @@ func setup_mesh_data(
 	print("Map was setup")
 		
 	# can't be saved because of HalfPlaneClass
-	polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
+	#polygon_regions = OrcaUtils.generate_allowed_area_regions(convex_polygons)
 	
 	setup_polygons(obstacle_region)
 		

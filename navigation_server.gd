@@ -58,7 +58,7 @@ func set_agent_destination(
 ):
 	var agent_id = agent.get_instance_id()
 	agent_id_to_agent_data[agent_id]["destination"] = destination
-	set_shortest_path(true)
+	set_shortest_path(true, agent_id)
 
 var cycle = 0
 func _physics_process(delta):
@@ -67,21 +67,23 @@ func _physics_process(delta):
 	
 	OrcaUtils.set_velocities_2(
 		agent_id_to_agent_data,
-		mesh_data.convex_polygons,
-		mesh_data.polygon_regions,
-		mesh_data.polygon_neighbours_dict,
-		mesh_data.polygon_corner_neighbour_dict,
+		#mesh_data.convex_polygons,
+		#mesh_data.polygon_regions,
+		#mesh_data.polygon_neighbours_dict,
+		#mesh_data.polygon_corner_neighbour_dict,
 		#mesh_data.pos_to_region,
 		mesh_data.grid_position_to_walls,
 		mesh_data.current_max_wall_vision
 	)
 	move_actors(delta)
-	set_shortest_path(true)
+	set_shortest_path(true, null)
 
-func set_shortest_path(forced):
+func set_shortest_path(forced, id):
 	var new_cycle = cycle % (agent_id_to_agent_data.size() * 4)
 	
 	for agent_id in agent_id_to_agent_data:
+		if id and agent_id != id:
+			continue
 		var agent_data = agent_id_to_agent_data[agent_id]
 		if not new_cycle == agent_data["idx"] and cycle > 10 and not forced:
 			continue

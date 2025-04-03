@@ -33,12 +33,14 @@ static func generate_allowed_area_region(convex_polygon: Array):
 		half_planes.append(half_plane)
 	return half_planes
 
+"""
 static func generate_allowed_area_regions(convex_polygons: Array):
 	var regions = []
 	for convex_polygon in convex_polygons:
 		var region = generate_allowed_area_region(convex_polygon)
 		regions.append(region)
 	return regions
+"""
 
 static func on_segment(l1 : Vector2, l2 : Vector2, p : Vector2):
 	if (l2-l1).dot(p-l1) < 0:
@@ -1037,10 +1039,10 @@ static func in_wall_range(
 static func set_velocity_2(
 	agent,
 	others_all,
-	convex_polygons,
-	polygon_regions,
-	polygon_to_neighbours,
-	polygon_to_corners,
+	#convex_polygons,
+	#polygon_regions,
+	#polygon_to_neighbours,
+	#polygon_to_corners,
 	#pos_to_region,
 	path,
 	grid_position_to_walls,
@@ -1053,17 +1055,6 @@ static func set_velocity_2(
 	
 	var visited_regions = []
 	
-	#var pos = GeometryUtils.get_closest_mesh_position(agent["position"], 2)
-	
-	#region = pos_to_region[pos]
-	"""
-	var near_wall = in_wall_range(
-		agent["agent"].position,
-		grid_position_to_walls,
-		wall_vision
-	)
-	"""
-	
 	var walls = get_close_walls(
 		agent["agent"].position,
 		grid_position_to_walls,
@@ -1074,39 +1065,7 @@ static func set_velocity_2(
 		agent,
 		walls
 	)
-	#wall_planes = []
 
-	"""
-	for i in convex_polygons.size():
-		if PolygonUtils.in_polygon(convex_polygons[i], agent["agent"].position):
-			region = adjust_region(polygon_regions[i], agent["agent"].position)
-			visited_regions.append(convex_polygons[i])
-			region_idx = i
-			break
-	
-	if region_idx == null:
-		near_wall = false
-		region_idx = agent["last_region_idx"]
-		region = adjust_region(polygon_regions[region_idx], agent["agent"].position)
-		visited_regions.append(convex_polygons[region_idx])
-		#for i in convex_polygons.size():
-		#	if PolygonUtils.in_polygon(convex_polygons[i], agent["position"] + agent["opt_velocity"]):
-		#		region = adjust_region(polygon_regions[i], agent["position"])
-		#		visited_regions.append(convex_polygons[i])
-		#		region_idx = i
-		#		break
-	
-	var target_region_idx = -1
-	"""
-	
-	"""
-	for i in convex_polygons.size():
-		if not path:
-			continue
-		if PolygonUtils.in_polygon(convex_polygons[i], path[0]):
-			target_region_idx = i
-			break
-	"""
 	for o in others_all:
 		if o["agent"].position.distance_to(agent["agent"].position) < 200:
 			others.append(o)
@@ -1142,68 +1101,6 @@ static func set_velocity_2(
 	agent["new_velocity"] = new_velocity
 	#agent["new_velocity"] = opt_vel
 	
-	return
-	
-	#if not near_wall:
-	#	agent["last_region_idx"] = region_idx
-	#	return
-	
-	if PolygonUtils.in_polygon(convex_polygons[region_idx], agent["agent"].position + agent["opt_velocity"] ):
-		return
-	
-	var min_dist = new_velocity.distance_to(agent["opt_velocity"])
-	# Force traveling to next region if current region doesn't hold the next path stop
-	#if path and not region_idx == target_region_idx and min_dist > 3:
-	#	min_dist = INF
-	
-	var corner_neighbours = PolygonUtils.pos_to_corner_neighbours(
-		agent["agent"].position,
-		region_idx,
-		convex_polygons,
-		polygon_to_corners
-	)
-	
-	for r_idx in corner_neighbours:
-		if r_idx == null:
-			continue
-		var new_region = adjust_region(polygon_regions[r_idx], agent["agent"].position)
-		var planes : Array[HalfPlane] = []
-		planes.append_array(h_ps)
-		#planes.append_array(new_region)
-		planes.append_array(wall_planes)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
-		var velocity = vs[1]
-		if velocity == null:
-			continue
-		var dist = velocity.distance_to(agent["opt_velocity"])
-		if dist < min_dist:
-			new_velocity = velocity
-			min_dist = dist
-		agent["new_velocity"] = new_velocity
-	
-	var found_region_idx = region_idx
-	
-	for w_index in polygon_to_neighbours[region_idx]:
-		var r_idx = polygon_to_neighbours[region_idx][w_index]
-		if r_idx == null:
-			continue
-		var new_region = adjust_region(polygon_regions[r_idx], agent["agent"].position)
-		var planes : Array[HalfPlane] = []
-		planes.append_array(h_ps)
-		#planes.append_array(new_region)
-		#planes.append_array(wall_planes)
-		var vs = randomized_bounded_lp(planes, agent["opt_velocity"], opt_vel, agent["delta_v"])
-		var velocity = vs[1]
-		if velocity == null:
-			continue
-		var dist = velocity.distance_to(agent["opt_velocity"])
-		if dist < min_dist:
-			new_velocity = velocity
-			min_dist = dist
-			found_region_idx = r_idx
-		agent["new_velocity"] = new_velocity
-	
-	agent["last_region_idx"] = found_region_idx 
 	
 static func set_opt_velocities(agents: Array, paths: Array):
 	var nr_agent = len(agents)
@@ -1271,12 +1168,6 @@ static func set_velocities(
 			generate_agent_halfplanes(
 				agent,
 				others,
-				#convex_polygons,
-				#polygon_regions,
-				#polygon_to_neighbours,
-				#polygon_to_corners,
-				#pos_to_region,
-				#paths[i]
 			)
 		
 		for i in range(nr_agents):
@@ -1308,11 +1199,6 @@ static func set_velocities(
 		
 static func set_velocities_2(
 	agent_id_to_agent_data,
-	convex_polygons,
-	polygon_regions,
-	polygon_to_neighbours,
-	polygon_to_corners,
-	#pos_to_region,
 	grid_position_to_walls,
 	wall_vision
 ):
@@ -1353,13 +1239,7 @@ static func set_velocities_2(
 			
 			generate_agent_halfplanes_2(
 				agent,
-				others,
-				#convex_polygons,
-				#polygon_regions,
-				#polygon_to_neighbours,
-				#polygon_to_corners,
-				#pos_to_region,
-				#paths[i]
+				others
 			)
 		
 		for i in range(nr_agents):
@@ -1377,11 +1257,6 @@ static func set_velocities_2(
 			set_velocity_2(
 				agent,
 				others,
-				convex_polygons,
-				polygon_regions,
-				polygon_to_neighbours,
-				polygon_to_corners,
-				#pos_to_region,
 				paths[i],
 				grid_position_to_walls,
 				wall_vision
@@ -1393,12 +1268,6 @@ static func set_velocities_2(
 		new_resting_agent = false
 		
 static func determine_tangent_to_circle(c, r: float):
-	#var devisor = c.x**2 + c.y**2
-	#var p_2 = (c.x**3 + c.x * c.y**2 - r**2 * c.x)/ devisor
-	#var q =  ((c.x**2 - r**2)**2 - r**2 * c.y**2 + c.x**2 * c.y**2)/devisor
-	#var p1 = p_2 - sqrt( p_2**2 - q )
-	#p1 = p_2 + sqrt( p_2**2 - q )
-	#var p2 = sqrt( r**2 - (p1 -c.x)**2) + c.y
 	var d = c.length()
 	var s1 = (1.0 - r**2/d**2) * c 
 	var s2 = sqrt(d**2 - r**2)* r/d**2 * Vector2(c.y, -c.x)
@@ -1525,84 +1394,6 @@ static func determine_closest_edge_point(
 		return [u2- v, -n2, u1 - v, -n1]
 		
 	return [u - v, n]
-	
-"""
-static func determine_closest_point_outside_normal_on_polygon(
-	pos: Vector2, 
-	polygon, 
-	radius: float, 
-	v: Vector2,
-	tau: float
-):
-	var c1 = Vector2(0,0)
-	var c2 = Vector2(0,0)
-	#var c1 = (w1 - pos) / tau
-	#var c2 = (w2 - pos) / tau
-	var r = radius / tau
-	var ts = determine_tangent_to_circle(c1, r)
-	var ts2 = determine_tangent_to_circle(c2, r)
-	var t1: Vector2 = ts[0]
-	if abs(t1.angle_to(c2)) < abs(ts[1].angle_to(c2)):
-		t1 = ts[1]
-	var t2 : Vector2 = ts2[0]
-	if abs(t2.angle_to(c1)) < abs(ts2[1].angle_to(c1)):
-		t2 = ts2[1]
-	
-	var dir = outside_normal(t1, t2, Vector2(0,0))	
-	
-	var n = null
-	var u = null
-	
-	var n1_n = -outside_normal(c1, c2, Vector2(0,0))
-	var c1_n = c1 + n1_n * r
-	var c2_n = c2 + n1_n * r
-	
-	var us = []
-	var ns = []
-	if on_half_line(t1, 2 * t1, v ):
-		var n1 = outside_normal(Vector2(0, 0), t1, c1)
-		var u1 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t1, v)
-		# Edge cases
-		var u3 = t1
-		var u4 = t2
-		ns += [n1]
-		us += [u1]
-	if  on_half_line(t2, 2 * t2, v ):
-		var n2 = outside_normal(Vector2(0, 0), t2, c2)
-		var u2 : Vector2 = GeometryUtils.get_closest_point_on_line(Vector2(0,0), t2, v)
-		ns += [n2]
-		us += [u2]
-	if on_segment(c1, c2, v):
-		var u1 = GeometryUtils.get_closest_point_on_line(c1_n, c2_n, v)
-		ns += [n1_n]
-		us += [u1]
-	if not on_segment(c1, c2, v) and not on_segment(t1, 100000 * t1.normalized(), v):
-		var n1 = (v - c1).normalized()
-		var u1 = c1 + n1 * r
-		ns += [n1]
-		us += [u1]
-	if not on_segment(c1, c2, v) and not on_segment(t2, 100000 * t2.normalized(), v):
-		var n1 = (v - c2).normalized()
-		var u1 = c2 + n1 * r
-		ns += [n1]
-		us += [u1]
-
-	ns += [n1_n, n1_n, outside_normal(Vector2(0, 0), t1, c1), outside_normal(Vector2(0, 0), t2, c2)]
-	us += [c1_n, c2_n, t1, t2]
-		
-	var dist = INF
-	for i in range(len(ns)):
-		var u_c = us[i]
-		var dist_c = u_c.distance_to(v)
-		if dist_c < dist:
-			dist = dist_c
-			u = u_c
-			n = ns[i]
-			
-	var n_out = -outside_normal(c1, c2, Vector2(0, 0))
-	
-	return [t1, t2, u - v , n, c1 + n_out * r, c2 + n_out*r]
-"""
 
 static func test_tangent_to_circle():
 	var r = 90

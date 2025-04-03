@@ -236,6 +236,13 @@ static func generate_grid_position_to_walls(
 	var x = int(dim_x / grid_size) + 2
 	var y = int(dim_y / grid_size) + 2
 	var grid_position_to_walls = {}
+	
+	var map_polygon = [
+		Vector2(0,0),
+		Vector2(0, dim_x),
+		Vector2(dim_x, dim_y)
+	]
+	
 	for k in x:
 		grid_position_to_walls[k] = {}
 		for l in y:
@@ -244,7 +251,7 @@ static func generate_grid_position_to_walls(
 			var y1 = (l-1) * grid_size
 			var y2 = y1 + grid_size
 			var walls = _get_walls_in_range(
-				polygons,
+				polygons, # + [map_polygon],
 				x1,
 				x2,
 				y1,
@@ -279,11 +286,12 @@ static func _get_walls_in_range(
 		margin
 	)
 	"""
+	# Map walls should be also obstacles
 	var ps = PolygonUtils.order_clockwise(
-		polygons	
+		polygons
 	)
-	for polygon in ps:#k in ps:
-		#var polygon = polygons[k]
+	for h in ps.size():
+		var polygon = ps[h]
 		for i in polygon.size():
 			var next_i = (i+1) % polygon.size()
 			var p1 = polygon[i]
@@ -296,7 +304,9 @@ static func _get_walls_in_range(
 				y_min,
 				y_max
 			):
-				var outside_normal = p1.direction_to(p2).rotated(PI/2) 
+				var outside_normal = p1.direction_to(p2).rotated(PI/2)
+				#if h == ps.size() - 1:
+				#	outside_normal *= -1 
 				walls.append([p1, p2, outside_normal])
 	
 	return walls

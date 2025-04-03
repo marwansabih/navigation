@@ -131,18 +131,6 @@ func _physics_process(delta):
 func _draw():
 	var mesh_data : MeshData = navigation_server.mesh_data
 
-
-
-	for h in mesh_data.convex_polygons.size():
-		var poly = mesh_data.convex_polygons[h]
-		#var region = mesh_data.polygon_regions[h]
-		for i in poly.size():
-			var p1 = poly[i]
-			var p2 = poly[(i+1) % poly.size()]
-			var color = Color.BLACK
-			var size = 3
-			draw_line(p1, p2, color, size)
-
 	for h in mesh_data.obstacles.size():
 		var poly = mesh_data.obstacles[h]
 		for i in poly.size():
@@ -211,8 +199,8 @@ func _draw():
 		var pos = agent_data["agent"].position
 		var path = agent_data["shortest_path"]
 		
-		if path:
-			draw_line(pos, path[0], Color.VIOLET)
+		#if path:
+		#	draw_line(pos, path[0], Color.VIOLET)
 			
 		draw_circle(
 			pos,
@@ -220,65 +208,4 @@ func _draw():
 			Color.BLACK
 		)
 	
-	var radius = 20
 	
-	draw_line(wall[0], wall[1], Color.BLUE, 4)
-	draw_circle(pos, radius, Color.YELLOW )
-	
-	var opt_velocity = Vector2(50, 80)
-	
-	for normal in wall_normals:
-		draw_line(normal[0], normal[1], Color.GREEN, 2)
-	
-	"""
-	var points = OrcaUtils.closest_point_on_wall_boundary(
-		pos,
-		wall,
-		radius,
-		1,
-		opt_velocity
-	)
-	"""
-	#draw_line(pos, pos + opt_velocity, Color.WEB_PURPLE, 2)
-	
-	#[p1, p2, t1_dir, t2_dir, p1_t, p2_t]
-	# 0   1    2        3       4    5    6    7   8   9
-	#[p1, p2, t1_dir, t2_dir, p1_t, p2_t, t1 , t2, c1, c2]
-	"""
-	var p1 = pos + points[0]
-	var p2 = pos + points[1]
-	
-	
-	var t1_dir = points[2]
-	var t2_dir = points[3]
-	
-	var p1_t = pos + points[4]
-	var p2_t = pos + points[5]
-	
-	var t1 = pos + points[6]
-	var t2 = pos + points[7]
-	
-	var c1 = pos + points[8]
-	var c2 = pos + points[9]
-	
-	var u_velocity = pos + points[10]
-	var normal = u_velocity + 16* points[11]
-	
-	#draw_circle(p1, 2, Color.NAVAJO_WHITE)
-	#draw_circle(p2, 2, Color.NAVAJO_WHITE)
-	draw_circle(c1, radius, Color.WHITE)
-	draw_circle(c2, radius, Color.WHITE)
-	draw_circle(c1, 2, Color.RED)
-	draw_circle(c2, 2, Color.RED)
-	draw_line(p1_t, p1_t + 1000 * t1_dir, Color.DARK_RED, 2)
-	draw_line(p2_t, p2_t + 1000 * t2_dir, Color.DARK_BLUE, 2)
-	draw_circle(p1_t, 2, Color.DARK_RED)
-	draw_circle(p2_t, 2, Color.DARK_BLUE)
-	
-	draw_circle(t1, 2, Color.DARK_RED)
-	draw_circle(t2, 2, Color.DARK_BLUE)    
-	draw_line(p1, p2, Color.WHITE, 2)
-	
-	draw_circle(u_velocity, 3, Color.RED)
-	draw_line(u_velocity, normal, Color.WHITE, 2)
-	"""
