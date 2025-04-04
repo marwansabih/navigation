@@ -41,12 +41,7 @@ func setup_mesh_data(
 		
 		setup_polygons(obstacle_region) 
 		
-		var pols = setup_large_polygons()
 		occupied_polygons = polygons
-		
-		var large_polygons = expand_polygons(
-			16
-		)
 		
 		edge_boxes = PolygonUtils.generate_polygon_edge_boxes(
 			polygons
@@ -88,12 +83,9 @@ func setup_mesh_data(
 	dim_y = rect.y
 	
 	setup_polygons(obstacle_region)
-	
-	var large_polygons = []
 
 	var polys = setup_large_polygons()
 	occupied_polygons = polys[0]
-	large_polygons = polys[1]
 	
 	
 	print("Occupied polygons and large polygons were setup")
@@ -174,19 +166,6 @@ func setup_polygons(obstacle_region):
 	for obstacle in obstacle_region.get_children():
 		polygons.append(obstacle.polygon)
 	polygons = PolygonUtils.order_clockwise(polygons)
-	
-func setup_pos_to_region(dimension_x, dimemsion_y):
-	pass
-	"""
-	for i in convex_polygons.size():
-		var convex_polygon = convex_polygons[i] 
-		for k in range(dimension_x):
-			for l in range(dimemsion_y):
-				var point = Vector2(k, l)
-				if PolygonUtils.in_polygon(convex_polygon, point):
-					pos_to_region[point] = polygon_regions[i]
-	return pos_to_region
-	"""
 
 func update_grid_position_to_walls(
 	radius,

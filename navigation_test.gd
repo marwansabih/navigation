@@ -2,24 +2,6 @@ extends Node2D
 
 var navigation_server : NavigationServer
 
-var adjusted_polygons
-
-var visibile_corners
-
-var observer
-
-var lines
-
-var area
-
-var areas 
-
-var wall = [Vector2(380,250), Vector2(400, 350)]
-
-var pos = Vector2(300, 300)
-
-var wall_normals = []
-
 #var edge_boxes
 
 # Called when the node enters the scene tree for the first time.
@@ -29,55 +11,6 @@ func _ready():
 	navigation_server = NavigationServer.new()
 	
 	navigation_server.setup_mesh_data($Polygons, "wall_map_new_new")
-	
-	var mesh_data = navigation_server.mesh_data
-	
-	for entry in mesh_data.grid_position_to_walls:
-		for k in mesh_data.grid_position_to_walls[entry]:
-			for wall in mesh_data.grid_position_to_walls[entry][k]:
-				var mid_point = (wall[0] + wall[1])/2
-				wall_normals.append([mid_point, mid_point + 16 * wall[2]])
-					
-	adjusted_polygons = VisibilityHelper.adjust_polygons(
-		mesh_data.polygons,
-		1152,
-		648
-	)
-	
-	observer = mesh_data.corners[19]
-	
-	visibile_corners = VisibilityHelper.get_visible_corners_for_observer(
-		adjusted_polygons,
-		observer,
-		1152,
-		648
-	)
-	
-	lines = VisibilityHelper.generate_view_lines(
-		observer,
-		adjusted_polygons,
-		visibile_corners["visible_corners"],
-		1152,
-		648
-	)
-	
-	
-	area = VisibilityHelper.gernerate_visible_area(
-		observer,
-		adjusted_polygons,
-		visibile_corners,
-		1152,
-		648
-	)
-	
-	areas = VisibilityHelper.generate_visible_areas(
-		mesh_data.corners,
-		mesh_data.polygons,
-		1152,
-		648
-	)
-	
-	area = areas[0]
 
 	for actor in $Actors.get_children():
 		navigation_server.register_agent(actor, 50, 150,8)
@@ -159,7 +92,7 @@ func _draw():
 	for agent_id in navigation_server.agent_id_to_agent_data:
 		var agent_data = navigation_server.agent_id_to_agent_data[agent_id]
 		var pos = agent_data["agent"].position
-		var path = agent_data["shortest_path"]
+		#var path = agent_data["shortest_path"]
 		
 		#if path:
 		#	draw_line(pos, path[0], Color.BLUE)

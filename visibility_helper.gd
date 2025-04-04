@@ -211,20 +211,18 @@ static func generate_visible_areas(
 	var areas = []
 	
 	for observer in observers:
-		var in_area = VisibilityHelper.in_area(
+		var inside_area = VisibilityHelper.in_area(
 			observer,
 			dim_x,
 			dim_y
 		)
-		if not in_area:
+		if not inside_area:
 			areas.append([])
 			continue
 			
 		var pairs = get_visible_corners_for_observer(
 			adjusted_polygons,
-			observer,
-			dim_x,
-			dim_y
+			observer
 		)
 		
 		var area = gernerate_visible_area(
@@ -322,13 +320,6 @@ static func adjust_line(line, polygon):
 		if inside:
 			return []
 	return line
-
-static func find_possible_intersections(
-	adjusted_polygons,
-	dim_x,
-	dim_y	
-):
-	pass
 	
 
 static func adjust_polygons(
@@ -368,12 +359,10 @@ static func intersect_polygon_two_times(
 			return true
 	return false
 		
-	
+			
 static func get_visible_corners_for_observer(
 	adjusted_polygons: Array,
-	observer: Vector2,
-	dim_x,
-	dim_y
+	observer: Vector2
 ):
 	var visibile_corners = []
 	var corner_rotations = []
@@ -435,6 +424,7 @@ static func are_polygons_equal(poly1: Array, poly2: Array) -> bool:
 			return false
 	return true
 
+"""
 # Remove duplicate polygons from the input list.
 static func deduplicate_polygons(polygons: Array) -> Array:
 	var unique_polys = []
@@ -447,6 +437,7 @@ static func deduplicate_polygons(polygons: Array) -> Array:
 		if not duplicate:
 			unique_polys.append(poly)
 	return unique_polys
+"""
 
 # Optional: Ensure that a polygon has a consistent (counterclockwise) winding.
 static func ensure_polygon_winding(poly: Array) -> Array:
@@ -570,64 +561,3 @@ static func compare_intersections(a, b) -> int:
 	elif a[0] > b[0]:
 		return 1
 	return 0
-
-# Compute the visibility polygon for the given observer, using the scene dimensions and a list of obstacle polygons.
-static func compute_visibility_polygon(observer: Vector2, polygons: Array, dim_x: float, dim_y: float) -> Array:
-	var ox = observer.x
-	var oy = observer.y
-	
-	# Deduplicate and ensure consistent winding.
-	var unique_polygons = VisibilityHelper.deduplicate_polygons(polygons)
-	for i in range(unique_polygons.size()):
-		unique_polygons[i] = VisibilityHelper.ensure_polygon_winding(unique_polygons[i])
-	
-	var segments = []
-	
-	# Add scene boundary segments.
-	var boundary = [Vector2(0, 0), Vector2(dim_x, 0), Vector2(dim_x, dim_y), Vector2(0, dim_y)]
-	for i in range(boundary.size()):
-		var bp1 = boundary[i]
-		var bp2 = boundary[(i + 1) % boundary.size()]
-		segments.append([bp1, bp2])
-	
-	# Add obstacle segments, clipping them to the scene.
-	for poly in unique_polygons:
-		var n = poly.size()
-		for i in range(n):
-			var p1 = poly[i]
-			var p2 = poly[(i + 1) % n]
-			var clipped = VisibilityHelper.clip_segment_to_rect(p1, p2, dim_x, dim_y)
-			if clipped != null:
-				segments.append(clipped)
-	
-	# Collect candidate angles from the scene boundary vertices and the obstacle vertices.
-	var candidate_angles = []
-	for vertex in boundary:
-		candidate_angles.append(atan2(vertex.y - oy, vertex.x - ox))
-	for poly in unique_polygons:
-		for vertex in poly:
-			candidate_angles.append(atan2(vertex.y - oy, vertex.x - ox))
-	candidate_angles.sort()
-	
-	var intersections = []
-	# For each candidate angle, cast a ray and find the closest intersection.
-	for angle in candidate_angles:
-		var closest_intersect = null
-		var min_t = INF
-		for seg in segments:
-			var result = VisibilityHelper.get_intersection(observer, angle, seg)
-			if result != null:
-				var t = result[1]
-				if t < min_t:
-					min_t = t
-					closest_intersect = result[0]
-		if closest_intersect != null:
-			intersections.append([angle, closest_intersect])
-	
-	intersections.sort_custom(VisibilityHelper.compare_intersections)
-	
-	var visibility_polygon = []
-	for item in intersections:
-		visibility_polygon.append(item[1])
-	
-	return visibility_polygon

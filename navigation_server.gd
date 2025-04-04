@@ -64,7 +64,7 @@ var cycle = 0
 func _physics_process(delta):
 	cycle += 1
 	
-	OrcaUtils.set_velocities_2(
+	OrcaUtils.set_velocities(
 		agent_id_to_agent_data,
 		mesh_data.grid_position_to_walls,
 		mesh_data.current_max_wall_vision
@@ -159,45 +159,6 @@ func shortest_path_between_positions(
 	if not cuts_shifted_line_1 and not cuts_shifted_line_2 and not cuts_shifted_line_0:
 		return [p2]
 	
-	"""
-	
-	var d = dir.rotated(PI/2).normalized()
-	
-	#var criterea_1 = intersect_with_occupied_polygons(p1 + d * 12, p2 + d*9)
-	#var criterea_2 = intersect_with_occupied_polygons(p1 - d * 12, p2 - d*9)
-	#dirty but fast
-	var criterea_3 = intersect_with_occupied_polygons(p1, p2)
-	
-	if not criterea_3:
-		return [p2]
-	
-	#if not criterea_1 and not criterea_2 and not criterea_3:
-	#	return [p2]
-	"""
-	
-	var p1_m = GeometryUtils.get_closest_mesh_position(p1, mesh_grid_size)
-	var p2_m = GeometryUtils.get_closest_mesh_position(p2, mesh_grid_size)
-	
-	#var groups = mesh_data.corner_groups
-	#var pos_to_corner_group_id = mesh_data.position_to_corner_group_id
-	
-	
-	"""
-	var neigh_1 = mesh_data.corner_groups[
-		mesh_data.position_to_corner_group_id[p1_m]
-	]
-	var neigh_2 = mesh_data.corner_groups[
-		mesh_data.position_to_corner_group_id[p2_m]
-	]
-	var neigh_1 = VisibilityHelper.get_visible_corner_ids(
-		mesh_data.visibility_polygons,
-		p1
-	)
-	var neigh_2 = VisibilityHelper.get_visible_corner_ids(
-		mesh_data.visibility_polygons,
-		p2
-	)
-	"""
 	
 	var neigh_1 = PolygonUtils.get_polygon_ids_from_row_dict(
 		p1,
@@ -295,7 +256,6 @@ func move_along_direction(
 		agent_data["dir"] = null
 		agent_data["new_velocity"] = Vector2(0,0)
 		return
-	var velocity = agent_data["velocity"]
 	var pos = agent_data["agent"].position
 	while path and path[0].distance_to(pos) < 3:
 		path.pop_front()
