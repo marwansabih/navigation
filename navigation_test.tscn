@@ -308,8 +308,8 @@ texture = ExtResource("2_6nobb")
 
 [node name="Actor7" type="Sprite2D" parent="Actors2"]
 self_modulate = Color(1, 0.384314, 0.431373, 1)
-position = Vector2(982.734, 290.023)
-scale = Vector2(0.0119629, 0.0103148)
+position = Vector2(978.242, 286.341)
+scale = Vector2(0.105592, 0.104051)
 texture = ExtResource("2_6nobb")
 
 [node name="Actor8" type="Sprite2D" parent="Actors2"]

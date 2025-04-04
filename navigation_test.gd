@@ -78,22 +78,6 @@ func _ready():
 	)
 	
 	area = areas[0]
-	
-	
-	
-	
-	#print(mesh_data.edges_to_path)
-	
-	#print(new_data == old)
-	
-	#for key in old:
-	#	for key_2 in old[key]:
-	#		if old[key][key_2] != new_data[key][key_2]:
-	#			print()
-	#			print("old")
-	#			print(old[key][key_2])
-	#			print("new")
-	#			print(new_data[key][key_2])
 
 	for actor in $Actors.get_children():
 		navigation_server.register_agent(actor, 50, 150,8)
@@ -132,6 +116,7 @@ func _draw():
 	var mesh_data : MeshData = navigation_server.mesh_data
 
 	for h in mesh_data.obstacles.size():
+		break
 		var poly = mesh_data.obstacles[h]
 		for i in poly.size():
 			var p1 = poly[i]
@@ -141,6 +126,7 @@ func _draw():
 			draw_line(p1, p2, color, size)
 	
 	for h in mesh_data.occupied_polygons.size():
+		break
 		var poly = mesh_data.occupied_polygons[h]
 		for i in poly.size():
 			var p1 = poly[i]
@@ -150,6 +136,7 @@ func _draw():
 			draw_line(p1, p2, color, size)
 	
 	for h in mesh_data.polygons.size():
+		break
 		var poly = mesh_data.occupied_polygons[h]
 		for i in poly.size():
 			var p1 = poly[i]
@@ -158,15 +145,6 @@ func _draw():
 			var size = 3
 			draw_line(p1, p2, color, size)
 	
-	"""
-	for box in mesh_data.edge_boxes:
-		draw_line(
-			box[0],
-			box[1],
-			Color.BLUE,
-			5
-		)
-	"""
 	
 	for i in mesh_data.edges_to_path:
 		break
@@ -175,24 +153,8 @@ func _draw():
 			for k in len(path) - 1:
 				draw_line(path[k], path[k+1], Color.WHITE, 3)
 	
-	for corner in mesh_data.corners:
-		draw_circle(corner, 3, Color.RED)
-	"""
-	for i in mesh_data.visibility_polygons[0].size():
-		var p1 = mesh_data.visibility_polygons[0][i]
-		var p2 = mesh_data.visibility_polygons[0][(i+1) % mesh_data.visibility_polygons[0].size()]
-		draw_line(p1, p2, Color.DARK_BLUE, 6)
-	draw_circle(mesh_data.corners[0], 6, Color.GREEN)
-	"""
-	"""
-	for polygon in adjusted_polygons:
-		for i in polygon.size():
-			var p1 = polygon[i]
-			var p2 = polygon[(i+1) % polygon.size()]
-			draw_circle(p1, 8, Color.RED)
-			draw_circle(p2, 8, Color.RED)
-			draw_line(p1, p2, Color.DARK_BLUE, 6)
-	"""
+	#for corner in mesh_data.corners:
+	#	draw_circle(corner, 3, Color.RED)
 	
 	for agent_id in navigation_server.agent_id_to_agent_data:
 		var agent_data = navigation_server.agent_id_to_agent_data[agent_id]
@@ -200,7 +162,7 @@ func _draw():
 		var path = agent_data["shortest_path"]
 		
 		#if path:
-		#	draw_line(pos, path[0], Color.VIOLET)
+		#	draw_line(pos, path[0], Color.BLUE)
 			
 		draw_circle(
 			pos,

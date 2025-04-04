@@ -49,7 +49,6 @@ static func find_shortest_path(graph, start, goal):
 			var p = current_node["point"]
 			var q = neighbour["point"]
 			var dist = GeometryUtils.isometric_distance(p,q)
-			#var dist = current_node["point"].distance_to(neighbour["point"])
 			if neighbour["dist"] > current_node["dist"] + dist:
 				neighbour["dist"] = current_node["dist"] + dist
 				neighbour["visited_from"] = current_node["id"]

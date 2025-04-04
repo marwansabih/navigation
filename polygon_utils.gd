@@ -275,17 +275,7 @@ static func _get_walls_in_range(
 	x_max += margin
 	y_min -= margin
 	y_max += margin
-	
-	"""
-	var ps = _get_polygons_in_range(
-		polygons,
-		x_min,
-		x_max,
-		y_min,
-		y_max,
-		margin
-	)
-	"""
+
 	# Map walls should be also obstacles
 	var ps = PolygonUtils.order_clockwise(
 		polygons
