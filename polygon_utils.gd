@@ -239,8 +239,9 @@ static func generate_grid_position_to_walls(
 	
 	var map_polygon = [
 		Vector2(0,0),
-		Vector2(0, dim_x),
-		Vector2(dim_x, dim_y)
+		Vector2(dim_x, 0),
+		Vector2(dim_x, dim_y),
+		Vector2(0, dim_y)
 	]
 	
 	for k in x:
@@ -251,7 +252,7 @@ static func generate_grid_position_to_walls(
 			var y1 = (l-1) * grid_size
 			var y2 = y1 + grid_size
 			var walls = _get_walls_in_range(
-				polygons, # + [map_polygon],
+				polygons + [map_polygon],
 				x1,
 				x2,
 				y1,
@@ -295,8 +296,8 @@ static func _get_walls_in_range(
 				y_max
 			):
 				var outside_normal = p1.direction_to(p2).rotated(PI/2)
-				#if h == ps.size() - 1:
-				#	outside_normal *= -1 
+				if h == ps.size() - 1:
+					outside_normal *= -1 
 				walls.append([p1, p2, outside_normal])
 	
 	return walls
